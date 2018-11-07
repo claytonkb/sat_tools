@@ -72,7 +72,7 @@ sub libs{
     print "libs\n" if $verbose;
     `mkdir -p lib`;
     chdir "src";
-    `gcc -c *.c -I../lib_babel/src -I../cnf_parse/src -Wfatal-errors -lm`;
+    `gcc -c *.c -I../lib_babel/src -Wfatal-errors -lm`;
 #    `gcc -O3 -c *.c -I../lib_babel/src -I../cnf_parse/src -Wfatal-errors -lm`;
     `mv *.o ../lib`;
     chdir "../";
