@@ -40,43 +40,62 @@ typedef struct{
 
     clause_list *cl;
 
-    mword *clause_array;
-    mword *clause_trie;
+    mword *clause_array;        // stores each clause (its variables)
+    mword *clause_trie;         // temporary data-structure used to construct var_clause_map
+
+    // XXX NOTE XXX 
+    //      all var* elements are 1-indexed; the 0-index is ignored/MBZ/nil
+    mword *var_array;           // stores the current assignment
+    mword *var_clause_map;      // maps each variable to the clause_id's in which it appears
+    mword *var_prop_clause_map; // maps each variable to only those clause_id's in which it appears in propagating position
+    mword *var_prop_var_map;    // maps each variable to the variables it can propagate
+
+    mword *var_lit_weights;      // lit_weight = occ_lit / occ_total
+    mword *clause_weights;       // clause_weight = 2^-length * (SUMi weight(lit_i))
+
+    mword *raw_clause_array;     // stores each clause (its variables)
+    mword *raw_var_clause_map;   // maps each variable to the clause_id's in which it appears
+    mword *reorder_clause_array; // clause_array, sorted by clause-length
+    mword *permute_var_array;    // breadth-first-traversal of graph, based on reorder_clause_array
+    mword *unpermute_var_array;
+
     mword *clause_sat;
     mword  clause_sat_count;
 
-    mword *mt_var_array;
-    float  mt_temp;
-    float  mt_annealing_rate;
+    mword *dev_reorder_clause_array;
+    mword *dev_permute_var_clause_map;
 
-    // all var* elements are 1-indexed; the 0-bit is ignored/MBZ/nil
-    mword *var_array;
-    mword *var_clause_map;
-    mword *var_prop_clause_map;
-    mword *var_prop_var_map;
-    mword *var_edit_offsets;
-    mword *var_edit_list;
+    mword *var_edit_offsets;    // used by cnf_var_assign() and "_unassign()
+    mword *var_edit_list;       // "        "           "
 
     mword dev_ctr;
     mword dev_break;
+    mword *dev_ptr;
     jmp_buf *dev_jmp;
 
 } backtrack_state;
 
 int  cmp_abs_int(const void *a, const void *b);
+int cmp_size(const void *a, const void *b);
+
 int  backtrack_solve(babel_env *be, backtrack_state *bs);
-int  backtrack_solve_r(babel_env *be, backtrack_state *bs, int start_var);
-int  backtrack_solve_it(babel_env *be, backtrack_state *bs);
-int  backtrack_solve_it_dpll(babel_env *be, backtrack_state *bs);
 
 void backtrack_init(babel_env *be, backtrack_state *bs);
 void backtrack_init_var_array(babel_env *be, backtrack_state *bs);
 void backtrack_init_solver_stack(babel_env *be, backtrack_state *bs);
 void backtrack_init_clause_array(babel_env *be, backtrack_state *bs);
 void backtrack_init_var_clause_map(babel_env *be, backtrack_state *bs);
+void backtrack_init_weights(babel_env *be, backtrack_state *bs);
+void backtrack_init_reorder_clause_array(babel_env *be, backtrack_state *bs);
+void backtrack_init_permute_variables(babel_env *be, backtrack_state *bs);
 void backtrack_init_var_prop_clause_map(babel_env *be, backtrack_state *bs);
 void backtrack_init_var_prop_var_map(babel_env *be, backtrack_state *bs);
 void backtrack_init_var_edit_list(babel_env *be, backtrack_state *bs);
+
+mword *backtrack_queue_new(babel_env *be);
+void backtrack_enqueue(babel_env *be, mword *queue, mword *payload);
+mword *backtrack_dequeue(babel_env *be, mword *queue);
+mword  backtrack_queue_depth(mword *queue);
 
 
 #endif // BACKTRACK_H

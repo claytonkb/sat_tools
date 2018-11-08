@@ -9,7 +9,16 @@
 #include "pearson.h"
 #include "io.h"
 #include "bstring.h"
+#include "bstruct.h"
 #include "array.h"
+#include <math.h>
+
+
+//
+//
+int cmp_size(const void *a, const void *b){
+    return ( size(*(mword*)a) - size(*(mword*)b) );
+}
 
 
 //
@@ -19,46 +28,27 @@ int cmp_abs_int(const void *a, const void *b){
 }
 
 
-//
-//
-void dev_dump(babel_env *be, mword *bs);
-void dev_dump(babel_env *be, mword *bs){
-    mword *temp = introspect_gv(be, bs);
-    //_say((char*)temp);
-    io_spit(be, "work/test.dot", temp, U8_ASIZE, OVERWRITE);
-}
-
-
 // Iterative modified DPLL
 //
-int backtrack_solve_it_dpll(babel_env *be, backtrack_state *bs){
-_trace;
-
-
-
-}
-
-
-
-
-// Iterative optimized backtrack
-//
-int backtrack_solve_it(babel_env *be, backtrack_state *bs){
-_trace;
-    // 2 continuations: cont_A, cont_B
+int backtrack_solve(babel_env *be, backtrack_state *bs){
 
     int curr_var = 1;
     int result = 0;
     int returning = 0;
 
     char *solver_stack = (char*)bs->solver_stack;
-    char *mt_var_array = (char*)bs->mt_var_array;
     solver_cont sc;
 
     while(1){
+
 bs->dev_ctr++;
-if((bs->dev_ctr % 20000) == 0)
+if((bs->dev_ctr % 100000) == 0){
     _prn(".");
+    if((bs->dev_ctr % 100000000) == 0){
+        _say("");
+        _dd(bs->dev_ctr);
+    }
+}
 
         if(curr_var == 1 && result == 1) // SAT
              break;
@@ -83,13 +73,12 @@ if((bs->dev_ctr % 20000) == 0)
             continue;
         }
 
-//        cnf_var_write(bs, curr_var, DEC_ASSIGN1_VS);
-        cnf_var_write(bs, curr_var, mt_var_array[curr_var]);
-
-        if(!cnf_var_unsat(bs, curr_var)){
-             solver_stack[curr_var] = CONT_A_SC;
-             curr_var++;
-             continue;
+        if(cnf_var_assign(bs, curr_var, DEC_ASSIGN1_VS)){
+            if(!cnf_var_unsat(bs, curr_var)){
+                 solver_stack[curr_var] = CONT_A_SC;
+                 curr_var++;
+                 continue;
+            }
         }
 
 cont_A:
@@ -100,20 +89,20 @@ cont_A:
              continue;
          }
          // else 
-//        cnf_var_negate(bs, curr_var);
-        if(mt_var_array[curr_var] == DEC_ASSIGN0_VS)
-            cnf_var_write(bs, curr_var, DEC_ASSIGN1_VS);
-        else
-            cnf_var_write(bs, curr_var, DEC_ASSIGN0_VS);
 
-        if(cnf_var_unsat(bs, curr_var)){
-            result = 0;
-            goto cont_B;
-        }
-        else{
-            solver_stack[curr_var] = CONT_B_SC; 
-            curr_var++;
-            continue;
+        cnf_var_unassign(bs, curr_var);
+        if(cnf_var_assign(bs, curr_var, DEC_ASSIGN0_VS)){
+
+            if(cnf_var_unsat(bs, curr_var)){
+                result = 0;
+                goto cont_B;
+            }
+            else{
+                solver_stack[curr_var] = CONT_B_SC; 
+                curr_var++;
+                continue;
+            }
+
         }
 
 cont_B:
@@ -121,12 +110,13 @@ cont_B:
         if(result == 0){
             if(curr_var == 1) // UNSAT
                 break;
-            cnf_var_write(bs, curr_var, UNASSIGNED_VS);
+            cnf_var_unassign(bs, curr_var);
         }
 
         returning = 1;
         curr_var--;
         continue;
+
 
     }
 
@@ -137,39 +127,32 @@ cont_B:
 
 //
 //
-int backtrack_solve(babel_env *be, backtrack_state *bs){
-
-    return backtrack_solve_r(be, bs, 1);
-
-}
-
-
-// recursive DPLL
-//
-int backtrack_solve_r(babel_env *be, backtrack_state *bs, int curr_var){
-
-
-}
-
-
-//
-//
 void backtrack_init(babel_env *be, backtrack_state *bs){
+
+    // clause_list               --> [init_clause_array]          --> raw_clause_array
+    //
+    // raw_clause_array          --> [init_var_clause_map]        --> raw_var_clause_map
+    //
+    // raw_clause_array       --+
+    // raw_var_clause_map     --+--> [init_reorder_clause_array]  --> reordered_clause_array
+    //
+    // raw_var_clause_map     --+
+    // reordered_clause_array --+--> [init_permute_variables] --+--> clause_array
+    //                                                           +--> var_clause_map
 
     clause_list *cl = bs->cl;
 
     bs->curr_var         = 0;
     bs->dev_ctr          = 0;
     bs->dev_break        = 0;
-    bs->clause_sat_count = 0;
-
-//    bs->clause_sat = mem_new_bits(be, cl->num_clauses);
-    bs->clause_sat = mem_new_str(be, bs->cl->num_clauses, '\0');
 
     backtrack_init_var_array(be, bs);
     backtrack_init_solver_stack(be, bs);
     backtrack_init_clause_array(be, bs);
     backtrack_init_var_clause_map(be, bs);
+    backtrack_init_weights(be, bs);
+    backtrack_init_reorder_clause_array(be, bs);
+    backtrack_init_permute_variables(be, bs);
     backtrack_init_var_prop_clause_map(be, bs);
     backtrack_init_var_prop_var_map(be, bs);
     backtrack_init_var_edit_list(be, bs);
@@ -209,9 +192,9 @@ void backtrack_init_clause_array(babel_env *be, backtrack_state *bs){
     int last_clause_index=0;
     int clause_i;
 
-    mword *clause_array = (mword*)mem_new_ptr(be, cl->num_clauses);
+    mword *raw_clause_array = (mword*)mem_new_ptr(be, cl->num_clauses);
     mword *curr_clause;
-    mword clause_size;
+    mword  clause_size;
 
     for(i=1; i<cl->num_clauses; i++){
 
@@ -227,7 +210,7 @@ void backtrack_init_clause_array(babel_env *be, backtrack_state *bs){
 
         last_clause_index = cl->clauses[i];
 
-        ldp(clause_array,i-1) = curr_clause;
+        ldp(raw_clause_array,i-1) = curr_clause;
 
     }
 
@@ -242,14 +225,14 @@ void backtrack_init_clause_array(babel_env *be, backtrack_state *bs){
         k++;
     }
 
-    ldp(clause_array,i-1) = curr_clause;
+    ldp(raw_clause_array,i-1) = curr_clause;
 
-    // sort each element of clause_array
-    for(i=1; i<cl->num_clauses; i++){
-        qsort(rdp(clause_array,i), size(rdp(clause_array,i)), sizeof(mword), cmp_abs_int);
+    // sort each element of raw_clause_array
+    for(i=0; i<cl->num_clauses; i++){
+        qsort(rdp(raw_clause_array,i), size(rdp(raw_clause_array,i)), sizeof(mword), cmp_abs_int);
     }
 
-    bs->clause_array = clause_array;
+    bs->raw_clause_array = raw_clause_array;
 
 }
 
@@ -261,10 +244,10 @@ void backtrack_init_var_clause_map(babel_env *be, backtrack_state *bs){
     int i,j;
     clause_list *cl = bs->cl;
 
-    mword *clause_array = bs->clause_array;
+    mword *raw_clause_array = bs->raw_clause_array;
 
     mword *clause_trie = trie_new(be);
-    mword clause_array_size = size(clause_array);
+    mword clause_array_size = size(raw_clause_array);
     mword curr_clause_size;
 
     mword *trie_entry;
@@ -275,7 +258,7 @@ void backtrack_init_var_clause_map(babel_env *be, backtrack_state *bs){
 
     for(i=0;i<clause_array_size;i++){
 
-        curr_clause = rdp(clause_array,i);
+        curr_clause = rdp(raw_clause_array,i);
         curr_clause_size = size(curr_clause);
 
         for(j=0;j<curr_clause_size;j++){
@@ -296,7 +279,7 @@ void backtrack_init_var_clause_map(babel_env *be, backtrack_state *bs){
 
     }
 
-    mword *var_clause_map    = mem_new_ptr(be, cl->num_variables+1);
+    mword *raw_var_clause_map    = mem_new_ptr(be, cl->num_variables+1);
 
     for(i=1; i <= cl->num_variables; i++){
 
@@ -307,11 +290,238 @@ void backtrack_init_var_clause_map(babel_env *be, backtrack_state *bs){
         if(!is_nil(trie_entry))
             trie_entry = trie_entry_get_payload(be, trie_entry);
 
-        ldp(var_clause_map,i) = list_to_val_array(be, trie_entry);
+        ldp(raw_var_clause_map,i) = list_to_val_array(be, trie_entry);
 
     }
 
-    bs->var_clause_map = var_clause_map;
+    bs->raw_var_clause_map = raw_var_clause_map;
+
+}
+
+
+//
+//
+void backtrack_init_weights(babel_env *be, backtrack_state *bs){
+
+    double sum_var_weight;
+    double var_weight;
+    double clause_weight;
+    int num_lit_occ;
+    int var_id;
+
+    mword *var_lit_weights = mem_new_val(be, bs->cl->num_variables+1, 0);
+
+    int i,j;
+    for(i=1; i <= bs->cl->num_variables; i++){
+        num_lit_occ = size(rdp(bs->raw_var_clause_map,i));
+        var_weight = (double)num_lit_occ / bs->cl->num_assignments;
+        *((double*)var_lit_weights+i) = var_weight;
+//        _dd(i);
+//        _df(var_weight);
+    }
+
+    mword *clause_weights = mem_new_val(be, bs->cl->num_clauses, 0);
+    mword *clause;
+    mword  clause_size;
+
+    for(i=0; i<bs->cl->num_clauses; i++){
+
+        clause = rdp(bs->raw_clause_array,i);
+        clause_size = size(clause);
+        sum_var_weight = 0;
+
+        // sum var_weights in this clause
+        for(j=0; j < clause_size; j++){
+            var_id = abs(rdv(clause,j));
+            var_weight = *((double*)var_lit_weights+var_id);
+            sum_var_weight += var_weight;
+        }
+//        _df(sum_var_weight);
+//        printf("%lf\n", sum_var_weight);
+//        clause_weight = (double)expf(-1 * clause_size) ;
+        clause_weight = (double)expf((-1.0f * clause_size)) * sum_var_weight;
+//        _df(clause_weight);
+        *((double*)clause_weights+i) = clause_weight;
+
+    }
+
+}
+
+
+//
+//
+void backtrack_init_reorder_clause_array(babel_env *be, backtrack_state *bs){
+
+    // FIXME:
+    //      sort by score, not clause-length
+    //      score is calculated as:
+    //          (2^-clause_length) * (SUM [var_weights in this clause])
+    mword *sort_clause_array = bstruct_cp(be, bs->raw_clause_array);
+    qsort(sort_clause_array, size(sort_clause_array), sizeof(mword), cmp_size);
+
+    int i,j;
+
+    mword *bfs_clause_array     = mem_new_ptr(be, size(sort_clause_array));
+    mword *reorder_clause_array = mem_new_ptr(be, size(sort_clause_array));
+
+    for(i=0; i<bs->cl->num_clauses; i++){
+        ldp(bfs_clause_array, i) = rdp(sort_clause_array, i);
+    }
+
+    mword *clause_queue = backtrack_queue_new(be);
+
+    // put clause_id 0 into clause_queue
+    // XXX NOTE: Think about inserting top K clause_id's into the clause queue 
+    //      to ensure that the BFS has a certain degree of "spread" throughout 
+    //      the graph.
+    backtrack_enqueue(be, clause_queue, _val(be, 0));
+
+    ldp(bfs_clause_array, 0) = be->nil;
+
+    mword *curr_clause;
+    mword  curr_clause_id;
+    mword *clauses;
+    mword  num_clause_vars;
+    mword  num_clauses;
+    mword  clause_id;
+    mword  reorder_clause_id = 0;
+
+    int counter = 0;
+    int depth;
+
+    while( backtrack_queue_depth(clause_queue) != 0 ){
+
+        curr_clause_id = rdv( backtrack_dequeue(be, clause_queue), 0 );
+
+        curr_clause = rdp(bs->raw_clause_array, curr_clause_id);
+        ldp(bfs_clause_array, curr_clause_id) = be->nil;
+        num_clause_vars = size(curr_clause);
+
+        ldp(reorder_clause_array, reorder_clause_id) = curr_clause;
+        reorder_clause_id++;
+
+        // for each var_id in curr_clause:
+        for(i=0; i<num_clause_vars; i++){
+
+            clauses = rdp(bs->raw_var_clause_map, abs(rdv(curr_clause,i)));
+            num_clauses = size(clauses);
+
+            // for each clause containing var_id:
+            for(j=0; j<num_clauses; j++){
+
+                clause_id = rdv(clauses,j);
+
+                if(is_nil(rdp(bfs_clause_array,clause_id))){
+                    continue;
+                }
+                else{
+                    backtrack_enqueue(be, clause_queue, _val(be, clause_id)); // place this clause_id into clause_queue
+                    ldp(bfs_clause_array,clause_id) = be->nil;
+                }
+
+            }
+
+        }
+
+    }
+
+    bs->reorder_clause_array = reorder_clause_array;
+
+}
+
+
+// precondition: need to have var_clause_map, based on reorder_clause_array
+// postcondition: Will need to generate fresh var_clause_map based on reorder_var_array
+//
+void backtrack_init_permute_variables(babel_env *be, backtrack_state *bs){
+
+    mword *permute_var_array = mem_new_val(be, bs->cl->num_variables+1, 0);
+    mword curr_var=1;
+
+    mword *clause;
+    mword  num_vars;
+    mword  var_id;
+
+    int i,j;
+    for(i=0; i<bs->cl->num_clauses; i++){
+
+        clause = rdp(bs->raw_clause_array, i);
+        num_vars = size(clause);
+
+        // for each var_id in clause:
+        for(j=0; j<num_vars; j++){
+            var_id = abs((int)clause[j]);
+            if(rdv(permute_var_array, var_id)){
+                continue;
+            }
+            else{
+                ldv(permute_var_array, var_id) = curr_var;
+                curr_var++;
+            }
+        }
+
+    }
+
+    bs->permute_var_array = permute_var_array;
+
+    mword *unpermute_var_array = mem_new_val(be, bs->cl->num_variables+1, 0);
+
+    for(i=1; i<=bs->cl->num_variables; i++){
+        var_id = rdv(permute_var_array, i);
+        ldv(unpermute_var_array, var_id) = i;
+    }
+
+    bs->unpermute_var_array = unpermute_var_array;
+
+    mword  new_var_id;
+    mword *new_clause;
+    mword *clause_array = mem_new_ptr(be,bs->cl->num_clauses);
+
+    // permute each variable while copying raw_clause_array --> clause_array
+    for(i=0; i<bs->cl->num_clauses; i++){
+
+        clause = rdp(bs->raw_clause_array, i);
+        num_vars = size(clause);
+
+        new_clause = mem_new_val(be, num_vars, 0);
+
+        // for each var_id in clause:
+        for(j=0; j<num_vars; j++){
+
+            new_var_id = permute_var_array[abs((int)clause[j])];
+
+            if((int)clause[j] < 0)
+                new_clause[j] = -1*new_var_id;
+            else
+                new_clause[j] = new_var_id;
+        }
+
+        ldp(clause_array,i) = new_clause;
+
+    }
+
+    mword *var_clause_map = mem_new_ptr(be,bs->cl->num_variables+1);
+
+    // copy raw_var_clause_map to var_clause_map, re-arranging entries by
+    // permute_var_array while copying
+    for(i=1; i<bs->cl->num_variables+1; i++){
+        // old     --> new
+        // index 4 --> index 1
+        new_var_id = permute_var_array[i];
+        ldp(var_clause_map, new_var_id) = rdp(bs->raw_var_clause_map, i);
+    }
+
+    bs->dev_reorder_clause_array    = clause_array;
+    bs->dev_permute_var_clause_map = var_clause_map;
+
+    bs->clause_array   = bs->raw_clause_array;
+    bs->var_clause_map = bs->raw_var_clause_map;
+
+//    bs->clause_array = clause_array;
+//    bs->var_clause_map = var_clause_map;
+
+//bs->dev_ptr = permute_var_array;
+//longjmp(*bs->dev_jmp, 0);
 
 }
 
@@ -515,6 +725,81 @@ void backtrack_init_var_edit_list(babel_env *be, backtrack_state *bs){
     bs->var_edit_list    = mem_new_str(be, curr_offset, '\0');
 
 }
+
+
+///////////////////////////////////////////////////////////////////////////
+
+
+// queue: [ptr queue_head queue_tail depth]
+//
+mword *backtrack_queue_new(babel_env *be){
+
+    mword *queue = mem_new_ptr(be, 3);
+    ldp(queue,2) = _val(be, 0);
+
+    return queue;
+
+}
+
+
+// queue: [ptr queue_head queue_tail depth]
+//
+void backtrack_enqueue(babel_env *be, mword *queue, mword *payload){
+
+    mword *depth = rdp(queue,2);
+
+    // cons the payload
+    mword *curr_tail = rdp(queue,1);
+    mword *new_tail = list_cons(be, payload, be->nil);
+
+    if(*depth == 0){
+        ldp(queue,0) = new_tail;
+        ldp(queue,1) = new_tail;
+    }
+    else{
+        ldp(curr_tail,1) = new_tail;
+        ldp(queue,1) = new_tail;
+    }
+
+    ldv(depth,0) = rdv(depth,0)+1;
+
+}
+
+
+// queue: [ptr queue_head queue_tail depth]
+//
+mword *backtrack_dequeue(babel_env *be, mword *queue){
+
+    mword *depth = rdp(queue,2);
+
+    if(*depth == 0)
+        return be->nil;
+
+    mword *curr_head = rdp(queue,0);
+
+    if(*depth == 1){
+        ldp(queue,0) = be->nil;
+        ldp(queue,1) = be->nil;
+    }
+    else{
+        ldp(queue,0) = pcdr(curr_head);
+    }
+
+    ldv(depth,0) = rdv(depth,0)-1;
+
+    return pcar(curr_head);
+
+}
+
+
+//
+//
+mword backtrack_queue_depth(mword *queue){
+
+    return vcar(rdp(queue,2));
+
+}
+
 
 
 // Clayton Bauman 2018
