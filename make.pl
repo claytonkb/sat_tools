@@ -12,7 +12,7 @@
 #
 #   Clean:
 #       perl make.pl clean
-#$verbose=1;
+$verbose=1;
 
 unless ($#ARGV > -1) {
     make_all();
@@ -53,20 +53,17 @@ sub all_libs{
 }
 
 sub lib_babel{
-    print "lib_babel\n" if $verbose;
-    chdir "lib_babel";
-    `perl make.pl libs`;
-    chdir "../";
-    `cp lib_babel/lib/libbabel.a lib`;
+    if(not -e "lib/libbabel.a"){
+        print "lib_babel\n" if $verbose;
+        chdir "lib_babel";
+        `perl make.pl libs`;
+        chdir "../";
+        `cp lib_babel/lib/libbabel.a lib`;
+    }
+    else{
+        print "skipping lib_babel\n" if $verbose;
+    }
 }
-
-#sub cnf_parse{
-#    print "cnf_parse\n" if $verbose;
-#    chdir "cnf_parse";
-#    `perl make.pl libs`;
-#    chdir "../";
-#    `cp cnf_parse/lib/libcnf_parse.a lib`;
-#}
 
 sub libs{
     print "libs\n" if $verbose;
