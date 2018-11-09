@@ -74,7 +74,9 @@ sub libs{
     chdir "src";
     `gcc -c *.c -I../lib_babel/src -Wfatal-errors -lm`;
 #    `gcc -O3 -c *.c -I../lib_babel/src -I../cnf_parse/src -Wfatal-errors -lm`;
+    `ar rcs libsat_tools.a *.o`;
     `mv *.o ../lib`;
+    `mv *.a ../lib`;
     chdir "../";
 }
 

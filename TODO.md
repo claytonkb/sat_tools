@@ -3,8 +3,12 @@ sat_tols
 
 *BUGS AT BOTTOM*
 
+    Refactor make.pl:
+        if libbabel.a already exists, point make.pl to it
+        this will allow sub-projects to compile lib_babel once and then pass
+            the compiled library to sat_tools make.pl script
+
     Next:
-        migrate from old file/function names to updated file/function names.
         think about:
             pthreads
             pds_la* and graph data-struct support
