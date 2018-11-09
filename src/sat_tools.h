@@ -13,7 +13,7 @@ typedef enum clause_prop_enum
       ASSIGN0_CP,  ASSIGN1_CP, } clause_prop;
 
 typedef enum var_state_enum 
-    { UNASSIGNED_VS, NEGATE_VS,
+    { UNASSIGNED_VS,  NEGATE_VS,
       DEC_ASSIGN0_VS, DEC_ASSIGN1_VS, 
       IMP_ASSIGN0_VS, IMP_ASSIGN1_VS } var_state;
 
@@ -53,7 +53,9 @@ typedef struct{
 
     mword *raw_clause_array;     // stores each clause (its variables)
     mword *raw_var_clause_map;   // maps each variable to the clause_id's in which it appears
-    mword *reorder_clause_array; // clause_array, sorted by clause-length
+
+    mword *reorder_clause_array; // clause_array, sorted by clause-score
+    mword *reorder_var_clause_map; 
     mword *permute_var_array;    // breadth-first-traversal of graph, based on reorder_clause_array
     mword *unpermute_var_array;
 

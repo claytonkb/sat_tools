@@ -57,12 +57,8 @@ void st_init(babel_env *be, st_state *bs){
     st_init_clause_array(be, bs);
     st_init_var_clause_map(be, bs);
     st_init_weights(be, bs);
-//    st_init_reorder_clause_array(be, bs);
-//    st_init_permute_variables(be, bs);
-
-    bs->clause_array   = bs->raw_clause_array;
-    bs->var_clause_map = bs->raw_var_clause_map;
-
+    st_init_reorder_clause_array(be, bs);
+    st_init_permute_variables(be, bs);
     st_init_var_prop_clause_map(be, bs);
     st_init_var_prop_var_map(be, bs);
     st_init_var_edit_list(be, bs);
@@ -189,7 +185,7 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
     }
 
-    mword *raw_var_clause_map    = mem_new_ptr(be, cl->num_variables+1);
+    mword *raw_var_clause_map = mem_new_ptr(be, cl->num_variables+1);
 
     for(i=1; i <= cl->num_variables; i++){
 
@@ -295,6 +291,7 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
     mword  num_clauses;
     mword  clause_id;
     mword  reorder_clause_id = 0;
+    mword *reorder_clause_id_map = mem_new_val(be, bs->cl->num_clauses, 0);
 
     int counter = 0;
     int depth;
@@ -307,7 +304,8 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
         ldp(bfs_clause_array, curr_clause_id) = be->nil;
         num_clause_vars = size(curr_clause);
 
-        ldp(reorder_clause_array, reorder_clause_id) = curr_clause;
+        ldv(reorder_clause_id_map, curr_clause_id) = reorder_clause_id; // used to build reorder_var_clause_map
+        ldp(reorder_clause_array,  reorder_clause_id) = curr_clause;
         reorder_clause_id++;
 
         // for each var_id in curr_clause:
@@ -336,6 +334,21 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
     }
 
     bs->reorder_clause_array = reorder_clause_array;
+
+    mword *reorder_var_clause_map = mem_new_ptr(be, bs->cl->num_variables+1);
+    mword *new_clauses;
+
+    for(i=1; i <= bs->cl->num_variables; i++){
+        clauses = rdp(bs->raw_var_clause_map, i);
+        num_clauses = size(clauses);
+        new_clauses = mem_new_val(be, num_clauses, 0);
+        for(j=0; j<num_clauses; j++){
+            ldv(new_clauses, j) = rdv(reorder_clause_id_map,rdv(clauses,j));
+        }
+        ldp(reorder_var_clause_map, i) = new_clauses;
+    }
+
+    bs->reorder_var_clause_map = reorder_var_clause_map;
 
 }
 
