@@ -245,9 +245,12 @@ int sls_mt_update_clause_sat(st_state *bs){
     char *clause_sat = (char*)bs->clause_sat;
 
     for(i=0; i<bs->cl->num_clauses; i++){
+
         if(cnf_clause_sat(bs, rdp(bs->clause_array,i))){
+
             clause_sat[i] = 1;
             sat_count++;
+
         }
         else{
             clause_sat[i] = 0;
@@ -296,14 +299,17 @@ int sls_gsat_solve(st_state *bs, int max_tries, int max_flips){
         inner_counter = 0;
 
         while(inner_counter++ < max_flips){
+//_trace;
 
             bs->clause_sat_count = sls_mt_update_clause_sat(bs);
+//_trace;
 
             best_sat_count = (bs->clause_sat_count > best_sat_count)
                     ?
                     bs->clause_sat_count 
                     : 
                     best_sat_count;
+//_trace;
 
             if(bs->clause_sat_count == bs->cl->num_clauses){
                 //fprintf(stderr,".");
@@ -312,14 +318,19 @@ int sls_gsat_solve(st_state *bs, int max_tries, int max_flips){
                     return best_sat_count;
                 }
             }
+//_trace;
 
             var_id = ((unsigned)sls_mt_rand() % (unsigned)bs->cl->num_variables) + 1;
+//_trace;
 
             cnf_var_negate(bs, var_id);
+//_trace;
 
             var_id = sls_gsat_var_choose(bs);
+//_trace;
 
             cnf_var_negate(bs, var_id);
+//_trace;
 
         }
 

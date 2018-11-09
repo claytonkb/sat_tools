@@ -41,21 +41,28 @@ void st_init(babel_env *be, st_state *bs){
     //
     // raw_var_clause_map     --+
     // reordered_clause_array --+--> [init_permute_variables] --+--> clause_array
-    //                                                           +--> var_clause_map
+    //                                                          +--> var_clause_map
 
     clause_list *cl = bs->cl;
 
     bs->curr_var         = 0;
     bs->dev_ctr          = 0;
     bs->dev_break        = 0;
+    bs->clause_sat_count = 0;
+
+    bs->clause_sat = mem_new_str(be, bs->cl->num_clauses, '\0');
 
     st_init_var_array(be, bs);
     st_init_solver_stack(be, bs);
     st_init_clause_array(be, bs);
     st_init_var_clause_map(be, bs);
     st_init_weights(be, bs);
-    st_init_reorder_clause_array(be, bs);
-    st_init_permute_variables(be, bs);
+//    st_init_reorder_clause_array(be, bs);
+//    st_init_permute_variables(be, bs);
+
+    bs->clause_array   = bs->raw_clause_array;
+    bs->var_clause_map = bs->raw_var_clause_map;
+
     st_init_var_prop_clause_map(be, bs);
     st_init_var_prop_var_map(be, bs);
     st_init_var_edit_list(be, bs);
