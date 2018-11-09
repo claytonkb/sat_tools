@@ -4,7 +4,7 @@
 #include "cnf_parse.h"
 #include "cutils.h"
 #include <time.h>
-//#include <random>
+#include "babel.h"
 
 int dev_i;
 void dev_prompt(void);
@@ -73,14 +73,6 @@ void dev_prompt(void){
 
             case 4:
                 cl = parse_DIMACS(cnf_file);
-                break;
-
-            case 5:
-                _mem(cl->clauses, cl->num_clauses);
-                break;
-
-            case 6:
-                _mem(cl->variables, cl->num_assignments);
                 break;
 
             default:

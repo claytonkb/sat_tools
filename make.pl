@@ -85,7 +85,7 @@ sub build{
     my $lib_string = "";
     for(@libs){ chomp $_; $lib_string .= "lib/$_ " };
     my $build_string =
-        "gcc test/main.c $lib_string -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm";
+        "gcc test/main.c $lib_string -lbabel -Llib -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm";
 #        "gcc -O3 test/main.c $lib_string -Isrc -Ilib_babel/src -Icnf_parse/src -o bin/test -Wfatal-errors -lm";
     `$build_string`;
 }

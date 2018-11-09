@@ -1,7 +1,7 @@
 // cnf.c
 
-#include "backtrack.h"
 #include "cnf.h"
+#include "babel.h"
 #include "introspect.h"
 #include "trie.h"
 #include "list.h"
@@ -14,7 +14,7 @@
 
 // var != 0
 //
-int cnf_var_unsat(backtrack_state *bs, int curr_var){
+int cnf_var_unsat(st_state *bs, int curr_var){
 
     mword *clause_array = bs->clause_array;
     mword *clause_indices = rdp(bs->var_clause_map, abs(curr_var));
@@ -37,7 +37,7 @@ int cnf_var_unsat(backtrack_state *bs, int curr_var){
 
 // caller must ensure var_id > 0
 //
-var_state cnf_var_read(backtrack_state *bs, int var_id){
+var_state cnf_var_read(st_state *bs, int var_id){
 
     return (var_state)array8_read( bs->var_array, var_id );
 
@@ -46,7 +46,7 @@ var_state cnf_var_read(backtrack_state *bs, int var_id){
 
 // caller must ensure var_id > 0
 //
-int cnf_var_assigned(backtrack_state *bs, int var_id){
+int cnf_var_assigned(st_state *bs, int var_id){
 
     return (cnf_var_read(bs, var_id) != UNASSIGNED_VS);
 
@@ -55,7 +55,7 @@ int cnf_var_assigned(backtrack_state *bs, int var_id){
 
 // caller must ensure var_id > 0
 //
-void cnf_var_write(backtrack_state *bs, int var_id, var_state vs){
+void cnf_var_write(st_state *bs, int var_id, var_state vs){
 
     array8_write( bs->var_array, var_id, (uint8_t)vs );
 
@@ -64,7 +64,7 @@ void cnf_var_write(backtrack_state *bs, int var_id, var_state vs){
 
 // caller must ensure var_id > 0
 //
-void cnf_var_negate(backtrack_state *bs, int var_id){
+void cnf_var_negate(st_state *bs, int var_id){
 
     var_state vs = (uint8_t)cnf_var_read(bs, var_id);
 
@@ -94,7 +94,7 @@ void cnf_var_negate(backtrack_state *bs, int var_id){
 
 // caller must ensure var_id > 0
 //
-int cnf_var_assign(backtrack_state *bs, int var_id, var_state vs){
+int cnf_var_assign(st_state *bs, int var_id, var_state vs){
 
     mword  base_offset    = rdv(bs->var_edit_offsets, var_id);
 
@@ -147,7 +147,7 @@ int cnf_var_assign(backtrack_state *bs, int var_id, var_state vs){
 
 // caller must ensure var_id > 0
 //
-void cnf_var_unassign(backtrack_state *bs, int var_id){
+void cnf_var_unassign(st_state *bs, int var_id){
 
     mword  base_offset    = rdv(bs->var_edit_offsets, var_id);
     mword *var_list      = rdp(bs->var_prop_var_map, var_id);
@@ -199,7 +199,7 @@ int cnf_polar_eq(int a, int b){
 
 // caller must ensure var_id > 0 && constant != 0
 //
-int cnf_var_eq(backtrack_state *bs, int var_id, int constant){
+int cnf_var_eq(st_state *bs, int var_id, int constant){
 
     int read_var = cnf_var_vs_to_polar( cnf_var_read(bs, var_id) );
 
@@ -214,7 +214,7 @@ int cnf_var_eq(backtrack_state *bs, int var_id, int constant){
 
 //
 //
-int cnf_clause_all_sat(backtrack_state *bs){
+int cnf_clause_all_sat(st_state *bs){
 
     mword num_clauses = bs->cl->num_clauses;
     int i;
@@ -236,7 +236,7 @@ int cnf_clause_all_sat(backtrack_state *bs){
 // Returns 1 if all variables are assigned and clause is unsatisfied
 // Otherwise, returns 0
 //
-int cnf_clause_unsat(backtrack_state *bs, mword *clause){
+int cnf_clause_unsat(st_state *bs, mword *clause){
 
     mword clause_size = size(clause);
 
@@ -268,7 +268,7 @@ int cnf_clause_unsat(backtrack_state *bs, mword *clause){
 // Returns 1 if all variables are assigned and clause is satisfied
 // Otherwise, returns 0
 //
-int cnf_clause_sat(backtrack_state *bs, mword *clause){
+int cnf_clause_sat(st_state *bs, mword *clause){
 
     mword clause_size = size(clause);
 
@@ -301,7 +301,7 @@ int cnf_clause_sat(backtrack_state *bs, mword *clause){
 //      all clause variables but last are assigned
 //      the last clause-variable is the variable being propagated
 //
-clause_prop cnf_clause_propagate(backtrack_state *bs, int clause_id){
+clause_prop cnf_clause_propagate(st_state *bs, int clause_id){
 
     mword *clause = rdp(bs->clause_array, clause_id);
 

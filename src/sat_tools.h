@@ -1,37 +1,35 @@
 // sat_tools.h
 //
 
-#ifndef SAT_TOOLS_H
-#define SAT_TOOLS_H
-
 #include "cnf_parse.h"
-#include "backtrack.h"
-
 #include "babel.h"
-#include "mem.h"
 
-//typedef enum clause_prop_enum 
-//    { CONFLICT_CP, 
-//      NO_PROP_CP,  PROP_CP,
-//      ASSIGN0_CP,  ASSIGN1_CP, } clause_prop;
-//
-//typedef enum var_state_enum 
-//    { UNASSIGNED_VS, NEGATE_VS,
-//      DEC_ASSIGN0_VS, DEC_ASSIGN1_VS, 
-//      IMP_ASSIGN0_VS, IMP_ASSIGN1_VS } var_state;
-//
-//typedef enum solver_cont_enum 
-//    { CONT_A_SC, CONT_B_SC } solver_cont;
-//
-//typedef struct{
-//
-//    uint32_t var;
-//    uint8_t  vs;
-//    uint8_t  padding0;
-//    uint8_t  padding1;
-//    uint8_t  padding2;
-//
-//} edit_list_entry;
+#ifndef BACKTRACK_H
+#define BACKTRACK_H
+
+typedef enum clause_prop_enum 
+    { CONFLICT_CP, 
+      NO_PROP_CP,  PROP_CP,
+      ASSIGN0_CP,  ASSIGN1_CP, } clause_prop;
+
+typedef enum var_state_enum 
+    { UNASSIGNED_VS, NEGATE_VS,
+      DEC_ASSIGN0_VS, DEC_ASSIGN1_VS, 
+      IMP_ASSIGN0_VS, IMP_ASSIGN1_VS } var_state;
+
+typedef enum solver_cont_enum 
+    { CONT_A_SC, CONT_B_SC } solver_cont;
+
+typedef struct{
+
+    uint32_t var;
+    uint8_t  vs;
+    uint8_t  padding0;
+    uint8_t  padding1;
+    uint8_t  padding2;
+
+} edit_list_entry;
+
 
 typedef struct{
 
@@ -75,22 +73,22 @@ typedef struct{
 
 } st_state;
 
-//int  cmp_abs_int(const void *a, const void *b);
-//int cmp_size(const void *a, const void *b);
+int  cmp_abs_int(const void *a, const void *b);
+int cmp_size(const void *a, const void *b);
 
-int  st_solve(babel_env *be, backtrack_state *bs);
+//int  st_solve(babel_env *be, st_state *bs);
 
-void st_init(babel_env *be, backtrack_state *bs);
-void st_init_var_array(babel_env *be, backtrack_state *bs);
-void st_init_solver_stack(babel_env *be, backtrack_state *bs);
-void st_init_clause_array(babel_env *be, backtrack_state *bs);
-void st_init_var_clause_map(babel_env *be, backtrack_state *bs);
-void st_init_weights(babel_env *be, backtrack_state *bs);
-void st_init_reorder_clause_array(babel_env *be, backtrack_state *bs);
-void st_init_permute_variables(babel_env *be, backtrack_state *bs);
-void st_init_var_prop_clause_map(babel_env *be, backtrack_state *bs);
-void st_init_var_prop_var_map(babel_env *be, backtrack_state *bs);
-void st_init_var_edit_list(babel_env *be, backtrack_state *bs);
+void st_init(babel_env *be, st_state *bs);
+void st_init_var_array(babel_env *be, st_state *bs);
+void st_init_solver_stack(babel_env *be, st_state *bs);
+void st_init_clause_array(babel_env *be, st_state *bs);
+void st_init_var_clause_map(babel_env *be, st_state *bs);
+void st_init_weights(babel_env *be, st_state *bs);
+void st_init_reorder_clause_array(babel_env *be, st_state *bs);
+void st_init_permute_variables(babel_env *be, st_state *bs);
+void st_init_var_prop_clause_map(babel_env *be, st_state *bs);
+void st_init_var_prop_var_map(babel_env *be, st_state *bs);
+void st_init_var_edit_list(babel_env *be, st_state *bs);
 
 mword *st_queue_new(babel_env *be);
 void   st_enqueue(babel_env *be, mword *queue, mword *payload);
@@ -98,8 +96,7 @@ mword *st_dequeue(babel_env *be, mword *queue);
 mword  st_queue_depth(mword *queue);
 
 
-
-#endif // SAT_TOOLS_H
+#endif // BACKTRACK_H
 
 
 // Clayton Bauman 2018

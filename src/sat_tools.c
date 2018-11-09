@@ -1,7 +1,6 @@
 // sat_tools.c
 
 #include "sat_tools.h"
-#include "backtrack.h"
 #include "cnf.h"
 #include "introspect.h"
 #include "trie.h"
@@ -15,106 +14,23 @@
 #include <math.h>
 
 
-// Iterative modified DPLL
 //
-int st_solve(babel_env *be, backtrack_state *bs){
-
-    int curr_var = 1;
-    int result = 0;
-    int returning = 0;
-
-    char *solver_stack = (char*)bs->solver_stack;
-    solver_cont sc;
-
-    while(1){
-
-bs->dev_ctr++;
-if((bs->dev_ctr % 100000) == 0){
-    _prn(".");
-    if((bs->dev_ctr % 100000000) == 0){
-        _say("");
-        _dd(bs->dev_ctr);
-    }
-}
-
-        if(curr_var == 1 && result == 1) // SAT
-             break;
-
-        if(returning){
-             returning = 0;
-             sc = solver_stack[curr_var];
-             switch(sc){
-                 case CONT_A_SC:
-                     goto cont_A;
-                 case CONT_B_SC:
-                     goto cont_B;
-             }
-        }
-
-        if(curr_var > bs->cl->num_variables){
-            if(cnf_clause_all_sat(bs)){
-                result = 1;
-                returning = 1;
-            }
-            curr_var--;
-            continue;
-        }
-
-        if(cnf_var_assign(bs, curr_var, DEC_ASSIGN1_VS)){
-            if(!cnf_var_unsat(bs, curr_var)){
-                 solver_stack[curr_var] = CONT_A_SC;
-                 curr_var++;
-                 continue;
-            }
-        }
-
-cont_A:
-
-        if(result == 1){
-             returning = 1;
-             curr_var--;
-             continue;
-         }
-         // else 
-
-        cnf_var_unassign(bs, curr_var);
-        if(cnf_var_assign(bs, curr_var, DEC_ASSIGN0_VS)){
-
-            if(cnf_var_unsat(bs, curr_var)){
-                result = 0;
-                goto cont_B;
-            }
-            else{
-                solver_stack[curr_var] = CONT_B_SC; 
-                curr_var++;
-                continue;
-            }
-
-        }
-
-cont_B:
-
-        if(result == 0){
-            if(curr_var == 1) // UNSAT
-                break;
-            cnf_var_unassign(bs, curr_var);
-        }
-
-        returning = 1;
-        curr_var--;
-        continue;
-
-
-    }
-
-    return result;
-
+//
+int cmp_size(const void *a, const void *b){
+    return ( size(*(mword*)a) - size(*(mword*)b) );
 }
 
 
 //
 //
-void st_init(babel_env *be, backtrack_state *bs){
+int cmp_abs_int(const void *a, const void *b){
+    return ( abs(*(int*)a) - abs(*(int*)b) );
+}
+
+
+//
+//
+void st_init(babel_env *be, st_state *bs){
 
     // clause_list               --> [init_clause_array]          --> raw_clause_array
     //
@@ -149,7 +65,7 @@ void st_init(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_var_array(babel_env *be, backtrack_state *bs){
+void st_init_var_array(babel_env *be, st_state *bs){
 
     // Note: UNASSIGNED_VS must be first element of var_state enum declaration
     // to ensure that it is assigned integer value 0
@@ -160,8 +76,8 @@ void st_init_var_array(babel_env *be, backtrack_state *bs){
 
 
 //
-void st_init_solver_stack(babel_env *be, backtrack_state *bs){
 //
+void st_init_solver_stack(babel_env *be, st_state *bs){
 
     bs->solver_stack = mem_new_str(be, bs->cl->num_variables+1, '\0');
 
@@ -171,7 +87,7 @@ void st_init_solver_stack(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_clause_array(babel_env *be, backtrack_state *bs){
+void st_init_clause_array(babel_env *be, st_state *bs){
 
     clause_list *cl = bs->cl;
 
@@ -226,7 +142,7 @@ void st_init_clause_array(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_var_clause_map(babel_env *be, backtrack_state *bs){
+void st_init_var_clause_map(babel_env *be, st_state *bs){
 
     int i,j;
     clause_list *cl = bs->cl;
@@ -288,7 +204,7 @@ void st_init_var_clause_map(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_weights(babel_env *be, backtrack_state *bs){
+void st_init_weights(babel_env *be, st_state *bs){
 
     double sum_var_weight;
     double var_weight;
@@ -337,7 +253,7 @@ void st_init_weights(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_reorder_clause_array(babel_env *be, backtrack_state *bs){
+void st_init_reorder_clause_array(babel_env *be, st_state *bs){
 
     // FIXME:
     //      sort by score, not clause-length
@@ -355,13 +271,13 @@ void st_init_reorder_clause_array(babel_env *be, backtrack_state *bs){
         ldp(bfs_clause_array, i) = rdp(sort_clause_array, i);
     }
 
-    mword *clause_queue = backtrack_queue_new(be);
+    mword *clause_queue = st_queue_new(be);
 
     // put clause_id 0 into clause_queue
     // XXX NOTE: Think about inserting top K clause_id's into the clause queue 
     //      to ensure that the BFS has a certain degree of "spread" throughout 
     //      the graph.
-    backtrack_enqueue(be, clause_queue, _val(be, 0));
+    st_enqueue(be, clause_queue, _val(be, 0));
 
     ldp(bfs_clause_array, 0) = be->nil;
 
@@ -376,9 +292,9 @@ void st_init_reorder_clause_array(babel_env *be, backtrack_state *bs){
     int counter = 0;
     int depth;
 
-    while( backtrack_queue_depth(clause_queue) != 0 ){
+    while( st_queue_depth(clause_queue) != 0 ){
 
-        curr_clause_id = rdv( backtrack_dequeue(be, clause_queue), 0 );
+        curr_clause_id = rdv( st_dequeue(be, clause_queue), 0 );
 
         curr_clause = rdp(bs->raw_clause_array, curr_clause_id);
         ldp(bfs_clause_array, curr_clause_id) = be->nil;
@@ -402,7 +318,7 @@ void st_init_reorder_clause_array(babel_env *be, backtrack_state *bs){
                     continue;
                 }
                 else{
-                    backtrack_enqueue(be, clause_queue, _val(be, clause_id)); // place this clause_id into clause_queue
+                    st_enqueue(be, clause_queue, _val(be, clause_id)); // place this clause_id into clause_queue
                     ldp(bfs_clause_array,clause_id) = be->nil;
                 }
 
@@ -420,7 +336,7 @@ void st_init_reorder_clause_array(babel_env *be, backtrack_state *bs){
 // precondition: need to have var_clause_map, based on reorder_clause_array
 // postcondition: Will need to generate fresh var_clause_map based on reorder_var_array
 //
-void st_init_permute_variables(babel_env *be, backtrack_state *bs){
+void st_init_permute_variables(babel_env *be, st_state *bs){
 
     mword *permute_var_array = mem_new_val(be, bs->cl->num_variables+1, 0);
     mword curr_var=1;
@@ -515,7 +431,7 @@ void st_init_permute_variables(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_var_prop_clause_map(babel_env *be, backtrack_state *bs){
+void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
 
     clause_list *cl = bs->cl;
 
@@ -635,7 +551,7 @@ void st_init_var_prop_clause_map(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_var_prop_var_map(babel_env *be, backtrack_state *bs){
+void st_init_var_prop_var_map(babel_env *be, st_state *bs){
 
     clause_list *cl = bs->cl;
 
@@ -682,7 +598,7 @@ void st_init_var_prop_var_map(babel_env *be, backtrack_state *bs){
 
 //
 //
-void st_init_var_edit_list(babel_env *be, backtrack_state *bs){
+void st_init_var_edit_list(babel_env *be, st_state *bs){
 
     int i,j;
 
