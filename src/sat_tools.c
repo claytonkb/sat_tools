@@ -263,7 +263,7 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
     //      score is calculated as:
     //          (2^-clause_length) * (SUM [var_weights in this clause])
     mword *sort_clause_array = bstruct_cp(be, bs->raw_clause_array);
-    qsort(sort_clause_array, size(sort_clause_array), sizeof(mword), cmp_size);
+//    qsort(sort_clause_array, size(sort_clause_array), sizeof(mword), cmp_size);
 
     int i,j;
 
@@ -341,14 +341,17 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
     for(i=1; i <= bs->cl->num_variables; i++){
         clauses = rdp(bs->raw_var_clause_map, i);
         num_clauses = size(clauses);
+        if(num_clauses == 0)
+            continue;
         new_clauses = mem_new_val(be, num_clauses, 0);
         for(j=0; j<num_clauses; j++){
-            ldv(new_clauses, j) = rdv(reorder_clause_id_map,rdv(clauses,j));
+            ldv(new_clauses, j) = rdv(reorder_clause_id_map, rdv(clauses,j));
         }
         ldp(reorder_var_clause_map, i) = new_clauses;
     }
 
     bs->reorder_var_clause_map = reorder_var_clause_map;
+    bs->reorder_clause_id_map = reorder_clause_id_map;
 
 }
 

@@ -56,6 +56,7 @@ typedef struct{
 
     mword *reorder_clause_array; // clause_array, sorted by clause-score
     mword *reorder_var_clause_map; 
+    mword *reorder_clause_id_map; 
     mword *permute_var_array;    // breadth-first-traversal of graph, based on reorder_clause_array
     mword *unpermute_var_array;
 
