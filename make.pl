@@ -13,7 +13,7 @@
 #   Clean:
 #       perl make.pl clean
 #$verbose=1;
-$optimize=1;
+$optimize=0;
 
 unless ($#ARGV > -1) {
     make_all();
