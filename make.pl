@@ -12,7 +12,8 @@
 #
 #   Clean:
 #       perl make.pl clean
-$verbose=1;
+#$verbose=1;
+$optimize=1;
 
 unless ($#ARGV > -1) {
     make_all();
@@ -69,8 +70,8 @@ sub libs{
     print "libs\n" if $verbose;
     `mkdir -p lib`;
     chdir "src";
-    `gcc -c *.c -I../lib_babel/src -Wfatal-errors -lm`;
-#    `gcc -O3 -c *.c -I../lib_babel/src -I../cnf_parse/src -Wfatal-errors -lm`;
+    `gcc -O3 -c *.c -I../lib_babel/src -Wfatal-errors -lm` if $optimize;
+    `gcc -c *.c -I../lib_babel/src -Wfatal-errors -lm` unless $optimize;
     `ar rcs libsat_tools.a *.o`;
     `mv *.o ../lib`;
     `mv *.a ../lib`;
@@ -83,10 +84,18 @@ sub build{
     my @libs = `ls lib`;
     my $lib_string = "";
     for(@libs){ chomp $_; $lib_string .= "lib/$_ " };
-    my $build_string =
-        "gcc test/main.c $lib_string -lbabel -Llib -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm";
-#        "gcc -O3 test/main.c $lib_string -Isrc -Ilib_babel/src -Icnf_parse/src -o bin/test -Wfatal-errors -lm";
+
+    my $build_string;
+    $build_string =
+        "gcc -O3 test/main.c $lib_string -Llib -lbabel -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm"
+        if $optimized;
+
+    $build_string =
+        "gcc test/main.c $lib_string -lbabel -Llib -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm"
+        unless $optimized;
+
     `$build_string`;
+
 }
 
 sub clean_all{
