@@ -174,6 +174,91 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
         for(j=0;j<curr_clause_size;j++){
 
+            //ldv(curr_index,0) = abs(rdv(curr_clause,j));
+            ldv(curr_index,0) = rdv(curr_clause,j);
+            pearson128(hash_key, be->zero_hash, (char*)curr_index, MWORD_SIZE);
+
+            trie_entry = trie_lookup_hash(be, clause_trie, hash_key, be->nil);
+
+            if(!is_nil(trie_entry))
+                trie_entry = trie_entry_get_payload(be, trie_entry);
+
+            new_list = list_cons(be, _val(be, i), be->nil);
+            list_push(be, trie_entry, new_list);
+            trie_insert(be, clause_trie, hash_key, be->nil, new_list);
+
+        }
+
+    }
+
+    mword *raw_var_clause_map = mem_new_ptr(be, cl->num_variables+1);
+    mword *lit_pos_clause_map = mem_new_ptr(be, cl->num_variables+1);
+    mword *lit_neg_clause_map = mem_new_ptr(be, cl->num_variables+1);
+
+    for(i=1; i <= cl->num_variables; i++){
+
+        ldv(curr_index,0) = i;
+        pearson128(hash_key, be->zero_hash, (char*)curr_index, MWORD_SIZE);
+        trie_entry = trie_lookup_hash(be, clause_trie, hash_key, be->nil);
+
+        if(!is_nil(trie_entry))
+            trie_entry = trie_entry_get_payload(be, trie_entry);
+
+        ldp(lit_pos_clause_map, i) = list_to_val_array(be, trie_entry);
+
+        ldv(curr_index,0) = -1*i;
+        pearson128(hash_key, be->zero_hash, (char*)curr_index, MWORD_SIZE);
+        trie_entry = trie_lookup_hash(be, clause_trie, hash_key, be->nil);
+
+        if(!is_nil(trie_entry))
+            trie_entry = trie_entry_get_payload(be, trie_entry);
+
+        ldp(lit_neg_clause_map,i) = list_to_val_array(be, trie_entry);
+
+        ldp(raw_var_clause_map,i) = 
+            array_cat(be, 
+                    ldp(lit_pos_clause_map, i), 
+                    ldp(lit_neg_clause_map ,i) );
+
+    }
+
+    bs->raw_var_clause_map = raw_var_clause_map;
+    bs->lit_pos_clause_map = lit_pos_clause_map;
+    bs->lit_neg_clause_map = lit_neg_clause_map;
+
+}
+
+
+#if 0
+//
+//
+void st_init_var_clause_map(babel_env *be, st_state *bs){
+
+    int i,j,k;
+    clause_list *cl = bs->cl;
+
+    mword *raw_clause_array = bs->raw_clause_array;
+
+    mword *clause_trie = trie_new(be);
+    mword clause_array_size = size(raw_clause_array);
+    mword curr_clause_size;
+
+    mword *trie_entry;
+    mword *hash_key = mem_new_val(be,HASH_SIZE,0);
+    mword *new_list;
+    mword *curr_index = mem_new_val(be, 2, 0);
+    mword *curr_clause;
+
+    mword *clauses;
+    mword  num_clauses;
+
+    for(i=0;i<clause_array_size;i++){
+
+        curr_clause = rdp(raw_clause_array,i);
+        curr_clause_size = size(curr_clause);
+
+        for(j=0;j<curr_clause_size;j++){
+
             ldv(curr_index,0) = abs(rdv(curr_clause,j));
             pearson128(hash_key, be->zero_hash, (char*)curr_index, MWORD_SIZE);
 
@@ -207,33 +292,8 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
     bs->raw_var_clause_map = raw_var_clause_map;
 
-    // create lit_pos_clause_map & lit_neg_clause_map:
-//    for(i=1; i <= cl->num_variables; i++){
-//
-//        clauses = rdp(bs->raw_var_clause_map, i);
-//        num_clauses = size(clauses);
-//
-//        for(j=0; j<num_clauses; j++){
-//
-//            curr_clause      = rdp(raw_clause_array, i);
-//            curr_clause_size = size(curr_clause);
-//
-//            for(k=0; k<curr_clause_size; k++){
-//                curr_var = rdv(curr_clause,k);
-//                if((curr_var==i)){
-//                    if(curr_var<0){
-//                        
-//                    }
-//                    else{
-//                    }
-//                }
-//            }
-//
-//        }
-//
-//    }
-
 }
+#endif
 
 
 //
