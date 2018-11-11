@@ -49,7 +49,6 @@ sub all_libs{
     print "all_libs\n" if $verbose;
     `mkdir -p lib`;
     lib_babel();
-#    cnf_parse();
     libs();
 }
 
@@ -68,7 +67,7 @@ sub lib_babel{
 
 sub libs{
     print "libs\n" if $verbose;
-    `mkdir -p lib`;
+#    `mkdir -p lib`;
     chdir "src";
     `gcc -O3 -c *.c -I../lib_babel/src -Wfatal-errors -lm` if $optimize;
     `gcc -c *.c -I../lib_babel/src -Wfatal-errors -lm` unless $optimize;
@@ -91,7 +90,7 @@ sub build{
         if $optimized;
 
     $build_string =
-        "gcc test/main.c $lib_string -lbabel -Llib -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm"
+        "gcc test/main.c $lib_string -Llib -lbabel -Isrc -Ilib_babel/src -o bin/test -Wfatal-errors -lm"
         unless $optimized;
 
     `$build_string`;

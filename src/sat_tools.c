@@ -4,13 +4,13 @@
 #include "cnf.h"
 #include "introspect.h"
 #include "trie.h"
-#include "list.h"
 #include "mem.h"
 #include "pearson.h"
 #include "io.h"
 #include "bstring.h"
 #include "bstruct.h"
 #include "array.h"
+#include "list.h"
 #include <math.h>
 
 
