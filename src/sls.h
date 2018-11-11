@@ -55,7 +55,8 @@ int    sls_kca_solve_body(kca_state *ks, int max_gens);
 void sls_kca_rand_candidate(kca_state *ks, mword *candidate);
 
 float  sls_kca_candidate_score(kca_state *ks, mword *candidate);
-//float  sls_kca_variable_score(void);
+float  sls_kca_variable_score(kca_state *ks, char *candidate_assignment);
+float  sls_kca_clause_score(kca_state *ks, char *candidate_assignment);
 //float  sls_kca_clause_score(kca_state *ks, int clause_id, char *clause, int clause_size);
 mword *sls_kca_make_candidate(babel_env *be, mword score, mword *assignment);
 

@@ -69,6 +69,9 @@ typedef struct{
     mword *var_edit_offsets;    // used by cnf_var_assign() and "_unassign()
     mword *var_edit_list;       // "        "           "
 
+    mword *lit_pos_clause_map; // maps each positive literal-occurrence in cl->variables to its clause
+    mword *lit_neg_clause_map; // maps each negative literal-occurrence in cl->variables to its clause
+
     mword dev_ctr;
     mword dev_break;
     mword *dev_ptr;

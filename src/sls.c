@@ -1,11 +1,9 @@
 // sls.c
 
 #include "sls.h"
-//#include "babel.h"
 #include "pearson.h"
 #include "cnf.h"
 #include "array.h"
-//#include "list.h"
 #include "mem.h"
 #include <math.h>
 
@@ -420,7 +418,7 @@ int sls_gsat_var_choose(st_state *st){
 int sls_kca_solve(kca_state *ks, int num_candidates, int max_gens){
 
     sls_kca_solve_init(ks, num_candidates);
-    return sls_kca_solve_body(ks, max_gens);
+//    return sls_kca_solve_body(ks, max_gens);
 
 }
 
@@ -565,26 +563,51 @@ float sls_kca_candidate_score(kca_state *ks, mword *candidate){
 
     // XXX: This is incorrect, we need a function that will give the clause-sat 
     //      count from a literal array
-    return (float)(sls_mt_clause_sat_count(ks->st)) / ks->st->cl->num_clauses;
+    float variable_score = sls_kca_variable_score(ks, (char*)candidate);
+    float clause_score   = sls_kca_clause_score(ks, (char*)candidate);
+
+    return variable_score * clause_score;
 
 }
 
 
-//// input: mu_vk and mu_~vk
-////
-//float sls_kca_variable_score(void){
+// input: mu_vk and mu_~vk
 //
-//}
+float sls_kca_variable_score(kca_state *ks, char *candidate_assignment){
+
+    // sum = 0
+    //
+    // for each variable:
+    //      sum += cnf_var_xor_score()
+    //
+    // return sum/num_variables
+    int i,j;
+    for(i=0; i < ks->st->cl->num_variables; i++){
+//        clauses = 
+//        for(j=0; j < ; j++){
+//            
+//        }
+    }
+
+}
+
+
+// input: mu_vk and mu_~vk
 //
+float sls_kca_clause_score(kca_state *ks, char *candidate_assignment){
+
+    // sum = 0
+    // for each clause: 
+        // sum += cnf_clause_sat_lit(st_state *bs, int clause_id, char *candidate_assignment);
+    //
+    // return sum/num_clauses
+
+}
+
+
+// cnf_var_xor_score
 //
-//// input: mu_vk and mu_~vk
-////
-//float sls_kca_clause_score(kca_state *ks, int clause_id, char *clause, int clause_size){
-//    // look up rdp(st->clause_array, clause_id) ... val-array
-//    // for each literal in this clause:
-//    //      3 11 -17
-//    //      ^ if match found, return 1.0
-//}
+// score = 1 - abs( mu_xi - mu_xbari )
 
 
 // [ptr [val <score>] [val8 <assignment>] ]

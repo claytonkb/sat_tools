@@ -4,6 +4,7 @@
 #include "cnf_parse.h"
 #include "cutils.h"
 
+
 // c ...
 // ...
 // p cnf var cls
@@ -81,6 +82,8 @@ int read_clauses(char *dimacs_str, clause_list *cl){
 
     int init_tok = true;
 
+    uint8_t *clause_lengths = (uint8_t*)malloc(sizeof(uint8_t)*(cl->num_clauses+1));
+
     uint64_t *clauses   = (uint64_t*)malloc(sizeof(uint64_t)*(cl->num_clauses+1));
     uint64_t *variables = (uint64_t*)malloc(sizeof(uint64_t)*CLAUSE_K*(cl->num_clauses+1));
 
@@ -89,10 +92,11 @@ int read_clauses(char *dimacs_str, clause_list *cl){
     clauses++;
 
     while(clause_ctr < cl->num_clauses){
+
         var_int=1;
 
         clauses[clause_ctr] = assignment_ctr;
-        clause_ctr++;
+        clause_lengths[clause_ctr] = 0;
 
         while(var_int && (assignment_ctr < CLAUSE_K*cl->num_clauses)){
 
@@ -113,9 +117,12 @@ int read_clauses(char *dimacs_str, clause_list *cl){
             if(var_int){
                 variables[assignment_ctr] = var_int;
                 assignment_ctr++;
+                clause_lengths[clause_ctr] = clause_lengths[clause_ctr] + 1; // XXX does not detect 255-overflow
             }
 
         }
+
+        clause_ctr++;
 
     }
 
@@ -128,6 +135,7 @@ int read_clauses(char *dimacs_str, clause_list *cl){
 
     cl->num_assignments = assignment_ctr;
     cl->clauses = clauses;
+    cl->clause_lengths = clause_lengths;
 
     if(assignment_ctr){
 //        cl->variables = (int*)malloc(sizeof(int)*assignment_ctr);

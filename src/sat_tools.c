@@ -102,6 +102,8 @@ void st_init_clause_array(babel_env *be, st_state *bs){
     mword *curr_clause;
     mword  clause_size;
 
+    // FIXME: cl->clause_lengths added so use them instead of the hacky
+    //          garbage below:
     for(i=1; i<cl->num_clauses; i++){
 
         clause_i = cl->clauses[i];
@@ -147,7 +149,7 @@ void st_init_clause_array(babel_env *be, st_state *bs){
 //
 void st_init_var_clause_map(babel_env *be, st_state *bs){
 
-    int i,j;
+    int i,j,k;
     clause_list *cl = bs->cl;
 
     mword *raw_clause_array = bs->raw_clause_array;
@@ -161,6 +163,9 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
     mword *new_list;
     mword *curr_index = mem_new_val(be, 2, 0);
     mword *curr_clause;
+
+    mword *clauses;
+    mword  num_clauses;
 
     for(i=0;i<clause_array_size;i++){
 
@@ -201,6 +206,32 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
     }
 
     bs->raw_var_clause_map = raw_var_clause_map;
+
+    // create lit_pos_clause_map & lit_neg_clause_map:
+//    for(i=1; i <= cl->num_variables; i++){
+//
+//        clauses = rdp(bs->raw_var_clause_map, i);
+//        num_clauses = size(clauses);
+//
+//        for(j=0; j<num_clauses; j++){
+//
+//            curr_clause      = rdp(raw_clause_array, i);
+//            curr_clause_size = size(curr_clause);
+//
+//            for(k=0; k<curr_clause_size; k++){
+//                curr_var = rdv(curr_clause,k);
+//                if((curr_var==i)){
+//                    if(curr_var<0){
+//                        
+//                    }
+//                    else{
+//                    }
+//                }
+//            }
+//
+//        }
+//
+//    }
 
 }
 
