@@ -215,6 +215,7 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
         ldp(lit_neg_clause_map,i) = list_to_val_array(be, trie_entry);
 
+        // XXX: We may need to qsort raw_var_clause_map ...
         ldp(raw_var_clause_map,i) = 
             array_cat(be, 
                     ldp(lit_pos_clause_map, i), 

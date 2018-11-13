@@ -304,17 +304,21 @@ int cnf_clause_sat_lit(st_state *bs, int clause_id, char *candidate_assignment){
 
 //    mword clause_size = size(rdp(bs->clause_array, clause_id));
     mword clause_size   = bs->cl->clause_lengths[clause_id];
-    mword clause_offset = bs->cl->clause_lengths[clause_id];
+    mword clause_offset = bs->cl->clauses[clause_id];
 
     int i;
-    int var, polarity;
+    int var, lit, polarity;
     int sat = 0;
     var_state read_var;
-
-    for(i=clause_offset; i<(clause_offset+clause_size); i++){
+   for(i=clause_offset; i<(clause_offset+clause_size); i++){
 
         var = candidate_assignment[i];
-        polarity = (bs->cl->variables[i] > 0);
+//_dd(var);
+        lit = (int)bs->cl->variables[i];
+//_dd(lit);
+        polarity = (lit > 0);
+//_dd(polarity);
+//_say("-----");
 
         if(    (var == DEC_ASSIGN0_VS) && (polarity == 0)
             || (var == DEC_ASSIGN1_VS) && (polarity == 1))

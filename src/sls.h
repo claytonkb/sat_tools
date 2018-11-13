@@ -44,21 +44,22 @@ typedef struct{
     mword *candidate_list;
     int num_candidates;
 
-//    mword *candidate_votes;
-
 } kca_state;
 
 int    sls_kca_solve(kca_state *ks, int num_candidates, int max_gens);
 int    sls_kca_solve_init(kca_state *ks, int num_candidates);
 int    sls_kca_solve_body(kca_state *ks, int max_gens);
 
-void sls_kca_rand_candidate(kca_state *ks, mword *candidate);
+void   sls_kca_rand_candidate(kca_state *ks, mword *candidate);
 
-float  sls_kca_candidate_score(kca_state *ks, mword *candidate);
-float  sls_kca_variable_score(kca_state *ks, char *candidate_assignment);
-float  sls_kca_clause_score(kca_state *ks, char *candidate_assignment);
+int    sls_kca_solution(kca_state *ks, mword *candidate);
+
+float  sls_kca_candidate_score(kca_state *ks, mword *candidate, float sample_rate);
+float  sls_kca_variable_score(kca_state *ks, char *candidate_assignment, float sample_rate);
+float  sls_kca_var_id_score(kca_state *ks, char *candidate_assignment, int var_id);
+float  sls_kca_clause_score(kca_state *ks, char *candidate_assignment, float sample_rate);
 //float  sls_kca_clause_score(kca_state *ks, int clause_id, char *clause, int clause_size);
-mword *sls_kca_make_candidate(babel_env *be, mword score, mword *assignment);
+//mword *sls_kca_make_candidate(babel_env *be, mword *score, mword *assignment);
 
 
 #endif // MT_H
