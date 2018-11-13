@@ -54,6 +54,7 @@ void st_init(babel_env *be, st_state *bs){
 
     st_init_var_array(be, bs);
     st_init_solver_stack(be, bs);
+    st_init_ucb_arrays(be, bs);
     st_init_clause_array(be, bs);
     st_init_var_clause_map(be, bs);
     st_init_weights(be, bs);
@@ -77,15 +78,27 @@ void st_init_var_array(babel_env *be, st_state *bs){
 }
 
 
-
 //
 //
 void st_init_solver_stack(babel_env *be, st_state *bs){
 
-    bs->solver_stack = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    bs->solver_stack     = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    bs->assignment_stack = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    bs->branch_history   = mem_new_str(be, bs->cl->num_variables+1, '\0');
 
 }
 
+
+//
+//
+void st_init_ucb_arrays(babel_env *be, st_state *bs){
+
+    bs->num_attempts_0 = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    bs->num_attempts_1 = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    bs->reward_0       = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    bs->reward_1       = mem_new_str(be, bs->cl->num_variables+1, '\0');
+
+}
 
 
 //

@@ -35,6 +35,8 @@ typedef struct{
 
     mword curr_var;
     mword *solver_stack;
+    mword *assignment_stack;
+    mword *branch_history;
 
     clause_list *cl;
 
@@ -72,6 +74,13 @@ typedef struct{
     mword *lit_pos_clause_map; // maps each positive literal-occurrence in cl->variables to its clause
     mword *lit_neg_clause_map; // maps each negative literal-occurrence in cl->variables to its clause
 
+    // num_attempts = num_attempts_0 + num_attempts_1
+    mword *num_attempts_0;
+    mword *num_attempts_1;
+
+    mword *reward_0;
+    mword *reward_1;
+
     mword dev_ctr;
     mword dev_break;
     mword *dev_ptr;
@@ -87,6 +96,7 @@ int cmp_size(const void *a, const void *b);
 void st_init(babel_env *be, st_state *bs);
 void st_init_var_array(babel_env *be, st_state *bs);
 void st_init_solver_stack(babel_env *be, st_state *bs);
+void st_init_ucb_arrays(babel_env *be, st_state *bs);
 void st_init_clause_array(babel_env *be, st_state *bs);
 void st_init_var_clause_map(babel_env *be, st_state *bs);
 void st_init_weights(babel_env *be, st_state *bs);
