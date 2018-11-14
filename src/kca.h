@@ -11,17 +11,28 @@
 
 #define kca_rand_literal kca_rand_candidate
 
-//    // kca-transpose:
-//    mword *literal_list; // transpose of kca_state->candidate_list
+//typedef struct{
 //
-//    // each candidate has the following form:
-//    //      [ptr [val <score>] [val <array_index>] ]
+//    babel_env *be;
+//    st_state  *st;
+//
+//    int num_candidates;
+//
+//    // kca-hybrid
+//    mword *literal_list;
+//    mword *candidate_list;
+//
+//    mword *lit_clause_map;
+//
+//    mword *var_pos_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
+//    mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
+//    mword *lit_avg_array;       // [val  ]            : size=num_assignments
+//    mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
+//    mword *running_score_array; // [val  ]            : size=num_candidates/2
+//
 //    mword *candidate_score_map;
 //
-//    // use these to accumulate score data while sweeping literals, that is,
-//    //      combine the generation & scoring phases to save the cache
-//    mword lit_clause_map;
-//    mword lit_var_map;
+//} kca_state;
 
 //typedef struct {
 //    uint64_t *variables;
@@ -34,14 +45,17 @@
 
 int    kca_solve(kca_state *ks, int num_candidates, int max_gens);
 int    kca_solve_init(kca_state *ks, int num_candidates);
-int    kca_solve_init_literals(kca_state *ks, int num_candidates);
+int    kca_solve_init_matrices(kca_state *ks, int num_candidates);
 int    kca_solve_init_score_map(kca_state *ks, int num_candidates);
 int    kca_solve_init_clause_map(kca_state *ks, int num_candidates);
 int    kca_solve_init_stats(kca_state *ks, int num_candidates);
-int    kca_solve_init_scores(kca_state *ks, int num_candidates);
 
 int    kca_solve_body(kca_state *ks, int max_gens);
+int    kca_solve_generate_new_candidates(kca_state *ks);
+int    kca_solve_merge_new_generation(kca_state *ks);
+int    kca_solve_update_literals(kca_state *ks);
 
+var_state kca_rand_lit(kca_state *ks, int lit_id);
 void   kca_rand_candidate(kca_state *ks, mword *candidate);
 
 int    kca_score_candidates(kca_state *ks, int begin_offset);

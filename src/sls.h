@@ -39,25 +39,28 @@ typedef struct{
     babel_env *be;
     st_state  *st;
 
-    // each candidate has the following form:
-    //      [ptr [val <score>] [val8 <assignment>] ]
-    mword *candidate_list;
     int num_candidates;
 
-    // kca-transpose:
-    mword *literal_list; // transpose of kca_state->candidate_list
+    // kca-hybrid
+    mword *literal_list;
+    mword *candidate_list;
 
-    // each candidate has the following form:
-    //      [ptr [val <score>] [val <array_index>] ]
-    mword *candidate_score_map;
-
-    // use these to accumulate score data while sweeping literals, that is,
-    //      combine the generation & scoring phases to save the cache
     mword *lit_clause_map;
 
-    mword *clause_sat_array;    // val8
-    mword *var_pos_count_array; // val
-    mword *var_neg_count_array; // val
+    mword *lh_matrix;
+    mword *rh_matrix;
+
+    mword *var_pos_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
+    mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
+    mword *lit_avg_array;       // [val  ]            : size=num_assignments
+    mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
+    mword *running_score_array; // [val  ]            : size=num_candidates/2
+
+    mword *score_map;
+
+    // XXX DEPRECATED XXX //
+    mword *candidate_score_map;
+    mword *clause_sat_array;    // [ptr [val8 ] ... ] : size=num_clauses x num_candidates/2
 
 } kca_state;
 
