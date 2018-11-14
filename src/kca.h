@@ -37,17 +37,23 @@ int    kca_solve_init(kca_state *ks, int num_candidates);
 int    kca_solve_init_literals(kca_state *ks, int num_candidates);
 int    kca_solve_init_score_map(kca_state *ks, int num_candidates);
 int    kca_solve_init_clause_map(kca_state *ks, int num_candidates);
+int    kca_solve_init_stats(kca_state *ks, int num_candidates);
+int    kca_solve_init_scores(kca_state *ks, int num_candidates);
 
 int    kca_solve_body(kca_state *ks, int max_gens);
 
 void   kca_rand_candidate(kca_state *ks, mword *candidate);
 
-int    kca_solution(kca_state *ks, mword *candidate);
+int    kca_score_candidates(kca_state *ks, int begin_offset);
 
+int    kca_solution(kca_state *ks, mword *candidate);
 float  kca_candidate_score(kca_state *ks, mword *candidate, float sample_rate);
 float  kca_variable_score(kca_state *ks, char *candidate_assignment, float sample_rate);
 float  kca_var_id_score(kca_state *ks, char *candidate_assignment, int var_id);
 float  kca_clause_score(kca_state *ks, char *candidate_assignment, float sample_rate);
+
+int    kca_sort_candidates(kca_state *ks);
+int    kca_generate_new_candidates(kca_state *ks);
 
 
 #endif // KCA_H

@@ -27,6 +27,8 @@ int kca_solve_init(kca_state *ks, int num_candidates){
     kca_solve_init_literals(ks, num_candidates);
     kca_solve_init_score_map(ks, num_candidates);
     kca_solve_init_clause_map(ks, num_candidates);
+    kca_solve_init_stats(ks, num_candidates);
+    kca_solve_init_scores(ks, num_candidates);
 
 }
 
@@ -76,6 +78,27 @@ int kca_solve_init_score_map(kca_state *ks, int num_candidates){
 
 //
 //
+int kca_solve_init_stats(kca_state *ks, int num_candidates){
+
+    ks->clause_sat_array    = mem_new_str(ks->be, ks->st->cl->num_clauses, '\0');
+    ks->var_pos_count_array = mem_new_val(ks->be, ks->st->cl->num_clauses, 0);
+    ks->var_neg_count_array = mem_new_val(ks->be, ks->st->cl->num_clauses, 0);
+
+}
+
+
+//
+//
+int kca_solve_init_scores(kca_state *ks, int num_candidates){
+
+    kca_score_candidates(ks, 0);
+
+}
+
+
+
+//
+//
 int kca_solve_init_clause_map(kca_state *ks, int num_candidates){
 
     mword *lit_clause_map = mem_new_val(ks->be, ks->st->cl->num_assignments, 0);
@@ -102,129 +125,99 @@ int kca_solve_init_clause_map(kca_state *ks, int num_candidates){
 
 
 // precondition:
-//      candidate_list populated:
-//          - generate random candidates
-//          - score
+//      literal_list populated
 //
 int kca_solve_body(kca_state *ks, int max_gens){
 
-    int var_id;
-    int best_sat_count = 0;
-    int counter = 0;
-    int i,j,k,l;
-    int overwrite_index;
-    var_state votes[5]; // FIXME: Make number of votes parameterizable
-    int       vote_ids[5];
-    int votes_0 = 0;
-    mword  candidate_id;
-    mword *curr_candidate;
-    float candidate_score;
-    mword *candidate_score_val;
-    float champion_score;
-    float sample_rate = 0.5;
+    while(max_gens--){
 
-    while(counter++ < max_gens){
+        // sort the candidate_score_map
+        kca_sort_candidates(ks);
 
-// sort candidates by score
-// cull bottom half (overwrite below):
-// generate n candidates in lower half with random literal assignment
-//      score the new candidates
-// for each remaining empty slot:
-//      kca_generate_candidate(champion, i, k random candidates) k odd
-//      score the new candidate
+        // generate next batch of candidates
+        kca_generate_new_candidates(ks);
 
-        qsort(ks->candidate_list, ks->num_candidates, sizeof(mword), cmp_kca_score);
-
-        overwrite_index=(ks->num_candidates/2); // cull (overwrite) the bottom 50% of candidates
-
-//        for(i=0; i<=(ks->num_candidates/20); i++){ // inject 5% random candidates to prevent getting stuck in a local minimum
-//
-//            kca_rand_candidate(ks, pcdr(rdp(ks->candidate_list, overwrite_index)));
-//
-//            candidate_score = kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, overwrite_index)), sample_rate);
-//            candidate_score_val = ldp(rdp(ks->candidate_list, overwrite_index),0);
-//            *(float*)candidate_score_val = candidate_score;
-//
-//            overwrite_index++;
-//
-//        }
-
-        // XXX: This loop will THRASH the cache... not sure anything can be done about it
-        #define champion_index 0
-        l = 0;
-
-        for(i=overwrite_index; i<ks->num_candidates; i++){
-
-            // FIXME bad loop:
-            //      select candidate indices here, then loop over those...
-
-            // NOTE: add parameter to kca_candidate_score() to allow to focus
-            //       on either variables or clauses. Do some initial training
-            //       across both simultaneously, then begin alternating.
-
-            // NOTE: add parameter to kca_candidate_score() to indicate how
-            //       extensively to measure score. Exhaustive measurement is way
-            //       too costly, especially in early generations.
-
-            vote_ids[0] = l;
-
-            if(rand_bent_coin(0.5))
-                vote_ids[1] = champion_index;
-            else
-                vote_ids[1] = ((unsigned)sls_mt_rand()%(ks->num_candidates/2));
-
-            vote_ids[2] = ((unsigned)sls_mt_rand()%(ks->num_candidates/2));
-            vote_ids[3] = ((unsigned)sls_mt_rand()%(ks->num_candidates/2));
-            vote_ids[4] = ((unsigned)sls_mt_rand()%(ks->num_candidates/2));
-
-            for(j=0; j<ks->st->cl->num_assignments; j++){
-
-                curr_candidate = pcdr(rdp(ks->candidate_list, vote_ids[0]));
-                votes[0] = array8_read(curr_candidate, j);
-
-                curr_candidate = pcdr(rdp(ks->candidate_list, vote_ids[1]));
-                votes[1] = array8_read(curr_candidate, j);
-
-                curr_candidate = pcdr(rdp(ks->candidate_list, vote_ids[2]));
-                votes[2] = array8_read(curr_candidate, j);
-
-                curr_candidate = pcdr(rdp(ks->candidate_list, vote_ids[3]));
-                votes[3] = array8_read(curr_candidate, j);
-
-                curr_candidate = pcdr(rdp(ks->candidate_list, vote_ids[4]));
-                votes[4] = array8_read(curr_candidate, j);
-
-                votes_0 = 0;
-                for(k=0;k<5;k++){
-                    if(votes[k] == DEC_ASSIGN0_VS)
-                        votes_0++;
-                }
-
-                if(votes_0 > 2) // KCA-literal
-                    array8_write( pcdr(rdp(ks->candidate_list, i)), j, DEC_ASSIGN0_VS);
-                else
-                    array8_write( pcdr(rdp(ks->candidate_list, i)), j, DEC_ASSIGN1_VS );
-
-            }
-
-            l++;
-
-            ldv(ldp(rdp(ks->candidate_list, i),0),0) =
-                kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, i)), sample_rate);
-
-            candidate_score = kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, i)), sample_rate);
-            candidate_score_val = ldp(rdp(ks->candidate_list, i),0);
-            *(float*)candidate_score_val = candidate_score;
-
-        }
-
-        champion_score = *(float*)(pcar(rdp(ks->candidate_list, 0)));
-        sample_rate = champion_score / 8;
+        // score the new candidates
+        kca_score_candidates(ks, (ks->num_candidates/2));
 
     }
 
-    return best_sat_count;
+    return 0;
 
+}
+
+
+//
+//
+int kca_score_candidates(kca_state *ks, int begin_offset){
+
+    int i,j;
+
+    unsigned char *curr_assignment;
+    unsigned char *clause_sat;
+    mword *var_pos_count;
+    mword *var_neg_count;
+    mword *curr_literal;
+
+    // reset ks->clause_sat_array (all sub-arrays from begin_offset)
+    // reset ks->var_pos_count_array (all sub-arrays from begin_offset)
+    // reset ks->var_neg_count_array (all sub-arrays from begin_offset)
+
+    for(i = 0; i < ks->st->cl->num_assignments; i++){
+
+        curr_assignment = (char*)rdp(ks->literal_list,i);
+        curr_literal    = rdp(ks->st->cl->variables, i);
+
+        if(curr_literal > 0){
+
+            for(j = begin_offset; j < ks->num_candidates; j++){
+
+                clause_sat = (char*)rdp(ks->clause_sat_array, j);
+                var_pos_count = rdp(ks->var_pos_count_array, j);
+
+                if((var_state)curr_assignment[j] == DEC_ASSIGN1_VS){
+                    clause_sat[ks->lit_clause_map[i]] = 1;
+                    ldv(var_pos_count,i) = ldv(var_pos_count,i) + 1;
+                }
+            }
+        }
+        else{ // curr_literal < 0
+
+            for(j = begin_offset; j < ks->num_candidates; j++){
+
+                clause_sat = (char*)rdp(ks->clause_sat_array, j);
+                var_neg_count = rdp(ks->var_neg_count_array, j);
+
+                if((var_state)curr_assignment[j] == DEC_ASSIGN0_VS){
+                    clause_sat[ks->lit_clause_map[i]] = 1;
+                    ldv(var_neg_count,i) = ldv(var_neg_count,i) + 1;
+                }
+            }
+        }
+    }
+
+}
+
+
+//
+//
+int kca_sort_candidates(kca_state *ks){
+
+    // qsort candidate_score_map by candidate_id
+
+    // update score for each candidate:
+//    for(j = begin_offset; j < ks->num_candidates; j++){
+//
+//    }
+
+    // qsort candidate_score_map by score
+
+}
+
+
+//
+//
+int kca_generate_new_candidates(kca_state *ks){
 }
 
 

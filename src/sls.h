@@ -54,7 +54,10 @@ typedef struct{
     // use these to accumulate score data while sweeping literals, that is,
     //      combine the generation & scoring phases to save the cache
     mword *lit_clause_map;
-    //mword *lit_var_map; --> use ks->st->cl->variables
+
+    mword *clause_sat_array;    // val8
+    mword *var_pos_count_array; // val
+    mword *var_neg_count_array; // val
 
 } kca_state;
 
