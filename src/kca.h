@@ -54,6 +54,9 @@ int    kca_solve_body(kca_state *ks, int max_gens);
 int    kca_solve_generate_new_candidates(kca_state *ks);
 int    kca_solve_merge_new_generation(kca_state *ks);
 int    kca_solve_update_literals(kca_state *ks);
+int    kca_solve_reset_stats(kca_state *ks);
+int    kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice);
+int    kca_solve_score_candidates(kca_state *ks);
 
 var_state kca_rand_lit(kca_state *ks, int lit_id);
 void   kca_rand_candidate(kca_state *ks, mword *candidate);

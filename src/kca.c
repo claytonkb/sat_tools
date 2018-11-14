@@ -203,7 +203,7 @@ int kca_solve_generate_new_candidates(kca_state *ks){
 
     int i,j;
 
-// kca_solve_reset_scores(ks);
+    kca_solve_reset_stats(ks);
 
     for(i = first_cand_id; i < ks->num_candidates; i++){
 
@@ -212,11 +212,41 @@ int kca_solve_generate_new_candidates(kca_state *ks){
         for(j=0; j < ks->st->cl->num_assignments; j++){
             lit_choice = kca_rand_lit(ks, j);
             curr_cand[j] = (unsigned char)lit_choice;
-// kca_solve_update_counts(ks, i, j, lit_choice);
+            kca_solve_update_counts(ks, i, j, lit_choice);
         }
     }
 
-// kca_solve_score_candidates(ks);
+    kca_solve_score_candidates(ks);
+
+}
+
+
+//
+//
+int kca_solve_reset_stats(kca_state *ks){
+
+    // reset var_pos_count_array
+    // reset var_neg_count_array
+    // reset sat_count_array
+    // reset running_score_array
+
+}
+
+
+//
+//
+int kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice){
+
+
+
+}
+
+
+//
+//
+int kca_solve_score_candidates(kca_state *ks){
+
+
 
 }
 
