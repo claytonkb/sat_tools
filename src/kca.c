@@ -14,8 +14,8 @@
 //
 int kca_solve(kca_state *ks, int num_candidates, int max_gens){
 
-    sls_kca_solve_init(ks, num_candidates);
-    return sls_kca_solve_body(ks, max_gens);
+    kca_solve_init(ks, num_candidates);
+    return kca_solve_body(ks, max_gens);
 
 }
 
@@ -24,32 +24,79 @@ int kca_solve(kca_state *ks, int num_candidates, int max_gens){
 //
 int kca_solve_init(kca_state *ks, int num_candidates){
 
-    mword *candidate_list  = mem_new_ptr(ks->be, num_candidates); // XXX: consider using a pyramidal-array when candidate_list gets large
+    kca_solve_init_literals(ks, num_candidates);
+    kca_solve_init_score_map(ks, num_candidates);
+    kca_solve_init_clause_map(ks, num_candidates);
+
+}
+
+
+//
+//
+int kca_solve_init_literals(kca_state *ks, int num_candidates){
+
+    mword *literal_list  = mem_new_ptr(ks->be, ks->st->cl->num_assignments);
 
     int i;
-    mword *new_candidate;
+    mword *new_literal;
     float candidate_score=0;
     mword *candidate_score_val;
 
-    // create ks->candidate_list
-    for(i=0; i<num_candidates; i++){
+    // create ks->literal_list
+    for(i=0; i < ks->st->cl->num_assignments; i++){
 
-        new_candidate = mem_new_str(ks->be, ks->st->cl->num_assignments, '\0');
-        sls_kca_rand_candidate(ks, new_candidate);
-
-        candidate_score = sls_kca_candidate_score(ks, new_candidate, 0.10);
-
-        candidate_score_val = _val(ks->be, 0);
-        *(float*)candidate_score_val = candidate_score;
-
-        ldp(candidate_list, i) = list_cons(ks->be, candidate_score_val, new_candidate);
+        new_literal = mem_new_str(ks->be, num_candidates, '\0');
+        kca_rand_literal(ks, new_literal);
+        ldp(literal_list,i) = new_literal;
 
     }
 
-    ks->candidate_list  = candidate_list;
-    ks->num_candidates  = num_candidates;
+    ks->literal_list   = literal_list;
+    ks->num_candidates = num_candidates;
 
-//    qsort(ks->candidate_list, ks->num_candidates, sizeof(mword), cmp_kca_score);
+}
+
+
+//
+//
+int kca_solve_init_score_map(kca_state *ks, int num_candidates){
+
+    mword *candidate_score_map = mem_new_ptr(ks->be, num_candidates);
+
+    int i;
+    for(i=0; i<num_candidates; i++){
+        ldp(candidate_score_map,i) 
+            = list_cons(ks->be, _val(ks->be, 0), _val(ks->be, i));
+    }
+
+    ks->candidate_score_map = candidate_score_map;
+
+}
+
+
+//
+//
+int kca_solve_init_clause_map(kca_state *ks, int num_candidates){
+
+    mword *lit_clause_map = mem_new_val(ks->be, ks->st->cl->num_assignments, 0);
+
+    int i,j;
+    int clause_length;
+    int lit_id=0;
+
+    // create ks->literal_list
+    for(i=0; i < ks->st->cl->num_clauses; i++){
+
+        clause_length = ks->st->cl->clause_lengths[i];
+
+        for(j=0; j < clause_length; j++){
+            ldv(lit_clause_map, lit_id) = i;
+            lit_id++;
+        }
+
+    }
+
+    ks->lit_clause_map = lit_clause_map;
 
 }
 
@@ -83,7 +130,7 @@ int kca_solve_body(kca_state *ks, int max_gens){
 // generate n candidates in lower half with random literal assignment
 //      score the new candidates
 // for each remaining empty slot:
-//      sls_kca_generate_candidate(champion, i, k random candidates) k odd
+//      kca_generate_candidate(champion, i, k random candidates) k odd
 //      score the new candidate
 
         qsort(ks->candidate_list, ks->num_candidates, sizeof(mword), cmp_kca_score);
@@ -92,9 +139,9 @@ int kca_solve_body(kca_state *ks, int max_gens){
 
 //        for(i=0; i<=(ks->num_candidates/20); i++){ // inject 5% random candidates to prevent getting stuck in a local minimum
 //
-//            sls_kca_rand_candidate(ks, pcdr(rdp(ks->candidate_list, overwrite_index)));
+//            kca_rand_candidate(ks, pcdr(rdp(ks->candidate_list, overwrite_index)));
 //
-//            candidate_score = sls_kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, overwrite_index)), sample_rate);
+//            candidate_score = kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, overwrite_index)), sample_rate);
 //            candidate_score_val = ldp(rdp(ks->candidate_list, overwrite_index),0);
 //            *(float*)candidate_score_val = candidate_score;
 //
@@ -111,11 +158,11 @@ int kca_solve_body(kca_state *ks, int max_gens){
             // FIXME bad loop:
             //      select candidate indices here, then loop over those...
 
-            // NOTE: add parameter to sls_kca_candidate_score() to allow to focus
+            // NOTE: add parameter to kca_candidate_score() to allow to focus
             //       on either variables or clauses. Do some initial training
             //       across both simultaneously, then begin alternating.
 
-            // NOTE: add parameter to sls_kca_candidate_score() to indicate how
+            // NOTE: add parameter to kca_candidate_score() to indicate how
             //       extensively to measure score. Exhaustive measurement is way
             //       too costly, especially in early generations.
 
@@ -163,9 +210,9 @@ int kca_solve_body(kca_state *ks, int max_gens){
             l++;
 
             ldv(ldp(rdp(ks->candidate_list, i),0),0) =
-                sls_kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, i)), sample_rate);
+                kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, i)), sample_rate);
 
-            candidate_score = sls_kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, i)), sample_rate);
+            candidate_score = kca_candidate_score(ks, pcdr(rdp(ks->candidate_list, i)), sample_rate);
             candidate_score_val = ldp(rdp(ks->candidate_list, i),0);
             *(float*)candidate_score_val = candidate_score;
 
@@ -232,8 +279,8 @@ float kca_candidate_score(kca_state *ks, mword *candidate, float sample_rate){
     while(result == 1.0){
         if(i++ > 10)
             break;
-        variable_score = sls_kca_variable_score(ks, (char*)candidate, sample_rate);
-        clause_score   = sls_kca_clause_score(ks, (char*)candidate,   sample_rate);
+        variable_score = kca_variable_score(ks, (char*)candidate, sample_rate);
+        clause_score   = kca_clause_score(ks, (char*)candidate,   sample_rate);
         result = variable_score * clause_score;
     }
 
@@ -253,7 +300,7 @@ float kca_variable_score(kca_state *ks, char *candidate_assignment, float sample
 
     if(sample_rate == 1.0f){
         for(i=1; i <= ks->st->cl->num_variables; i++){
-            sum += sls_kca_var_id_score(ks, candidate_assignment, i);
+            sum += kca_var_id_score(ks, candidate_assignment, i);
         }
         return sum / ks->st->cl->num_variables;
     }
@@ -261,7 +308,7 @@ float kca_variable_score(kca_state *ks, char *candidate_assignment, float sample
         num_samples = ks->st->cl->num_variables * sample_rate;
         for(i=0; i < num_samples; i++){
             var_id = ((unsigned)sls_mt_rand() % (unsigned)ks->st->cl->num_variables) + 1;
-            sum += sls_kca_var_id_score(ks, candidate_assignment, var_id);
+            sum += kca_var_id_score(ks, candidate_assignment, var_id);
         }
         return sum / num_samples;
     }

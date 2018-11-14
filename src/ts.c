@@ -32,17 +32,17 @@ if((bs->dev_ctr % 100000) == 0){
 }
 
         if(curr_var == 1 && result == 1) // SAT
-             break;
+            break;
 
         if(returning){
-             returning = 0;
-             sc = solver_stack[curr_var];
-             switch(sc){
-                 case CONT_A_SC:
-                     goto cont_A;
-                 case CONT_B_SC:
-                     goto cont_B;
-             }
+            returning = 0;
+            sc = solver_stack[curr_var];
+            switch(sc){
+                case CONT_A_SC:
+                    goto cont_A;
+                case CONT_B_SC:
+                    goto cont_B;
+            }
         }
 
         if(curr_var > bs->cl->num_variables){
@@ -69,9 +69,9 @@ if((bs->dev_ctr % 100000) == 0){
 //        if(cnf_var_assign(bs, curr_var, DEC_ASSIGN1_VS)){
         if(cnf_var_assign(bs, curr_var, curr_assignment)){
             if(!cnf_var_unsat(bs, curr_var)){
-                 solver_stack[curr_var] = CONT_A_SC;
-                 curr_var++;
-                 continue;
+                solver_stack[curr_var] = CONT_A_SC;
+                curr_var++;
+                continue;
             }
         }
 
@@ -202,16 +202,16 @@ if((bs->dev_ctr % 100000) == 0){
 }
 
         if(curr_var == 1 && result == 1) // SAT
-             break;
+            break;
 
         if(returning){
-             returning = 0;
-             sc = solver_stack[curr_var];
-             switch(sc){
-                 case CONT_A_SC:
-                     goto cont_A;
-                 case CONT_B_SC:
-                     goto cont_B;
+            returning = 0;
+            sc = solver_stack[curr_var];
+            switch(sc){
+                case CONT_A_SC:
+                    goto cont_A;
+                case CONT_B_SC:
+                    goto cont_B;
              }
         }
 
@@ -226,20 +226,20 @@ if((bs->dev_ctr % 100000) == 0){
 
         if(cnf_var_assign(bs, curr_var, DEC_ASSIGN1_VS)){
             if(!cnf_var_unsat(bs, curr_var)){
-                 solver_stack[curr_var] = CONT_A_SC;
-                 curr_var++;
-                 continue;
+                solver_stack[curr_var] = CONT_A_SC;
+                curr_var++;
+                continue;
             }
         }
 
 cont_A:
 
         if(result == 1){
-             returning = 1;
-             curr_var--;
-             continue;
-         }
-         // else 
+            returning = 1;
+            curr_var--;
+            continue;
+        }
+        // else 
 
         cnf_var_unassign(bs, curr_var);
         if(cnf_var_assign(bs, curr_var, DEC_ASSIGN0_VS)){

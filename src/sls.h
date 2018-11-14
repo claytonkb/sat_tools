@@ -44,6 +44,18 @@ typedef struct{
     mword *candidate_list;
     int num_candidates;
 
+    // kca-transpose:
+    mword *literal_list; // transpose of kca_state->candidate_list
+
+    // each candidate has the following form:
+    //      [ptr [val <score>] [val <array_index>] ]
+    mword *candidate_score_map;
+
+    // use these to accumulate score data while sweeping literals, that is,
+    //      combine the generation & scoring phases to save the cache
+    mword *lit_clause_map;
+    //mword *lit_var_map; --> use ks->st->cl->variables
+
 } kca_state;
 
 int    sls_kca_solve(kca_state *ks, int num_candidates, int max_gens);
