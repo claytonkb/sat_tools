@@ -146,9 +146,9 @@ int kca_solve_init_score_map(kca_state *ks, int num_candidates){
 //
 int kca_solve_init_stats(kca_state *ks, int num_candidates){
 
-    ks->sat_count_array     = mem_new_str(ks->be, num_candidates/2, '\0');
-    ks->lit_avg_array       = mem_new_str(ks->be, ks->st->cl->num_assignments, '\0');
-    ks->running_score_array = mem_new_str(ks->be, ks->st->cl->num_assignments, '\0');
+    ks->sat_count_array     = mem_new_val(ks->be, num_candidates/2, 0);
+    ks->lit_avg_array       = mem_new_val(ks->be, ks->st->cl->num_assignments, 0);
+    ks->running_score_array = mem_new_val(ks->be, ks->st->cl->num_assignments, 0);
 
     ks->var_pos_count_array = mem_new_ptr(ks->be, num_candidates/2);
     ks->var_neg_count_array = mem_new_ptr(ks->be, num_candidates/2);
@@ -228,8 +228,8 @@ int kca_solve_reset_stats(kca_state *ks){
     mword *curr_cand_neg_counts;
 
     for(i=0; i < ks->num_candidates/2; i++){
-        ldv(ks->sat_count_array,i) = 0;
-        ldv(ks->running_score_array,i) = 0;
+        ks->sat_count_array[i] = 0;
+        ks->running_score_array[i] = 0;
     }
 
     for(i=0; i < ks->num_candidates/2; i++){
@@ -251,16 +251,18 @@ int kca_solve_reset_stats(kca_state *ks){
 int kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice){
 
     // update sat_count_array[cand_id]
-    //      if(ks->last_sat_clause < lit_clause_map[lit_id])
-    //          sat_count_array[cand_id]++
-    //          ks->last_sat_clause = lit_clause_map[lit_id]
-    //
-    // if((int)rdv(ks->st->cl->variables,lit_id) > 0)
-    //      if(lit_choice == DEC_ASSIGN1_VS)
-    //          ks->var_pos_count_array[cand_id] ++
-    // else
-    //      if(lit_choice == DEC_ASSIGN0_VS)
-    //          ks->var_neg_count_array[cand_id] ++
+    if(ks->last_sat_clause < ks->lit_clause_map[lit_id]){
+        ks->sat_count_array[cand_id]++;
+        ks->last_sat_clause = ks->lit_clause_map[lit_id];
+    }
+
+    if(((int)rdv(ks->st->cl->variables,lit_id) > 0)
+        && (lit_choice == DEC_ASSIGN1_VS))
+            ks->var_pos_count_array[cand_id] ++;
+    else if(((int)rdv(ks->st->cl->variables,lit_id) < 0)
+        && (lit_choice == DEC_ASSIGN0_VS))
+            ks->var_neg_count_array[cand_id]++;
+    //else do nothing
 
 }
 
@@ -271,6 +273,7 @@ int kca_solve_score_candidates(kca_state *ks){
 
     // for cand_id = 0 to M/2
     //      running_score_array[cand_id] = sls_kca_score(sat_count, pos_count_array, neg_count_array)
+    
 
 }
 

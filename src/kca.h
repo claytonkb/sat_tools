@@ -27,7 +27,7 @@
 //    mword *var_pos_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
 //    mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
 //    mword *lit_avg_array;       // [val  ]            : size=num_assignments
-//    mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
+//    mword *sat_count_array;     // [val  ]            : size=num_candidates/2
 //    mword *running_score_array; // [val  ]            : size=num_candidates/2
 //
 //    mword *candidate_score_map;
