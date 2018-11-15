@@ -50,11 +50,16 @@ typedef struct{
     mword *lh_matrix;
     mword *rh_matrix;
 
+    // XXX PERF: make var_pos/neg_count_arrays into multi-dim var arrays;
+    //              makes resetting faster (memset) and might speed up main
+    //              loop, as well
     mword *var_pos_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
     mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
     mword *lit_avg_array;       // [val  ]            : size=num_assignments
     mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
     mword *running_score_array; // [val  ]            : size=num_candidates/2
+
+    int last_sat_clause;
 
     mword *score_map;
 

@@ -51,8 +51,6 @@
 //      for 0 to M/2:
 //          sum positive settings
 //      update lit_avg_array[lit_id] from sum
-//
-// To reduce collisions in the cache during copy phase, choose M=2*p where p is some prime
 
 //
 //
@@ -225,10 +223,25 @@ int kca_solve_generate_new_candidates(kca_state *ks){
 //
 int kca_solve_reset_stats(kca_state *ks){
 
-    // reset var_pos_count_array
-    // reset var_neg_count_array
-    // reset sat_count_array
-    // reset running_score_array
+    int i, j;
+    mword *curr_cand_pos_counts;
+    mword *curr_cand_neg_counts;
+
+    for(i=0; i < ks->num_candidates/2; i++){
+        ldv(ks->sat_count_array,i) = 0;
+        ldv(ks->running_score_array,i) = 0;
+    }
+
+    for(i=0; i < ks->num_candidates/2; i++){
+        curr_cand_pos_counts = rdp(ks->var_pos_count_array,i);
+        curr_cand_neg_counts = rdp(ks->var_neg_count_array,i);
+        for(j=0; j < ks->st->cl->num_variables; j++){
+            ldv(curr_cand_pos_counts,j) = 0;
+            ldv(curr_cand_neg_counts,j) = 0;
+        }
+    }
+
+    ks->last_sat_clause = -1;
 
 }
 
@@ -237,7 +250,17 @@ int kca_solve_reset_stats(kca_state *ks){
 //
 int kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice){
 
-
+    // update sat_count_array[cand_id]
+    //      if(ks->last_sat_clause < lit_clause_map[lit_id])
+    //          sat_count_array[cand_id]++
+    //          ks->last_sat_clause = lit_clause_map[lit_id]
+    //
+    // if((int)rdv(ks->st->cl->variables,lit_id) > 0)
+    //      if(lit_choice == DEC_ASSIGN1_VS)
+    //          ks->var_pos_count_array[cand_id] ++
+    // else
+    //      if(lit_choice == DEC_ASSIGN0_VS)
+    //          ks->var_neg_count_array[cand_id] ++
 
 }
 
@@ -246,7 +269,8 @@ int kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state li
 //
 int kca_solve_score_candidates(kca_state *ks){
 
-
+    // for cand_id = 0 to M/2
+    //      running_score_array[cand_id] = sls_kca_score(sat_count, pos_count_array, neg_count_array)
 
 }
 
