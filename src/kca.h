@@ -45,14 +45,8 @@
 //
 //} kca_state;
 
-//typedef struct {
-//    uint64_t *variables;
-//    uint64_t *clauses;
-//    uint8_t  *clause_lengths;
-//    int       num_variables;
-//    int       num_clauses;
-//    int       num_assignments;
-//} clause_list;
+typedef enum score_sel_enum 
+    { CLAUSE_VAR_SCORE, CLAUSE_SCORE, VAR_SCORE } score_sel;
 
 int    kca_solve(kca_state *ks, int num_candidates, int max_gens);
 int    kca_solve_init(kca_state *ks, int num_candidates);
@@ -62,12 +56,13 @@ int    kca_solve_init_clause_map(kca_state *ks, int num_candidates);
 int    kca_solve_init_stats(kca_state *ks, int num_candidates);
 
 int    kca_solve_body(kca_state *ks, int max_gens);
-int    kca_solve_generate_new_candidates(kca_state *ks);
+int    kca_solve_generate_new_candidates(kca_state *ks, score_sel sel);
 int    kca_solve_merge_new_generation(kca_state *ks);
 int    kca_solve_update_lit_count(kca_state *ks);
 int    kca_solve_reset_stats(kca_state *ks);
+int    kca_solve_reset_sat_counts(kca_state *ks);
 int    kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice);
-int    kca_solve_score_candidates(kca_state *ks);
+int    kca_solve_score_candidates(kca_state *ks, score_sel sel);
 
 var_state kca_rand_lit(kca_state *ks, int lit_id);
 void   kca_rand_candidate(kca_state *ks, mword *candidate);
@@ -76,7 +71,7 @@ int    kca_score_candidates(kca_state *ks, int begin_offset);
 float  kca_var_id_score(kca_state *ks, int var_id, int var_pos_count, int var_neg_count);
 
 int    kca_solution(kca_state *ks, mword *candidate);
-float  kca_candidate_score(kca_state *ks, int cand_id);
+float  kca_candidate_score(kca_state *ks, int cand_id, score_sel sel);
 float  kca_variable_score(kca_state *ks, char *candidate_assignment, float sample_rate);
 float  kca_clause_score(kca_state *ks, int sat_count);
 
