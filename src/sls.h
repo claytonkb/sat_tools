@@ -41,14 +41,10 @@ typedef struct{
 
     int num_candidates;
 
-    // kca-hybrid
-    mword *literal_list;
-    mword *candidate_list;
-
     mword *lit_clause_map;
 
-    mword *lh_matrix;
-    mword *rh_matrix;
+    mword *lh_matrix; // [ptr [val  ] ... ] : size=num_assignments x num_candidates/2
+    mword *rh_matrix; // [ptr [ptr [val <score> ] [val <candidate> ] ] ... ] : size=num_candidates/2 x 2
 
     // XXX PERF: make var_pos/neg_count_arrays into multi-dim var arrays;
     //              makes resetting faster (memset) and might speed up main
@@ -57,15 +53,20 @@ typedef struct{
     mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
     mword *lit_avg_array;       // [val  ]            : size=num_assignments
     mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
-    mword *running_score_array; // [val  ]            : size=num_candidates/2
+    mword *lh_score_map;        // [ptr [ptr [val <score> ] [val <cand_id> ] ] ... ] : size=num_candidates/2 x 2
+
+    // XXX GET RID OF (rh scores are stored in rh_matrix):
+    mword *rh_score_array;      // [val  ]            : size=num_candidates/2
 
     int last_sat_clause;
-
-    mword *score_map;
 
     // XXX DEPRECATED XXX //
     mword *candidate_score_map;
     mword *clause_sat_array;    // [ptr [val8 ] ... ] : size=num_clauses x num_candidates/2
+
+    //sls_kca*:
+    mword *literal_list;
+    mword *candidate_list;
 
 } kca_state;
 
