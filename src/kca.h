@@ -28,7 +28,7 @@
 //    //              loop, as well
 //    mword *var_pos_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
 //    mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
-//    mword *lit_avg_array;       // [val  ]            : size=num_assignments
+//    mword *lit_count_array;       // [val  ]            : size=num_assignments
 //    mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
 //    mword *lh_score_map;        // [ptr [ptr [val <score> ] [val <cand_id> ] ] ... ] : size=num_candidates/2 x 2
 //    mword *rh_score_array;      // [val  ]            : size=num_candidates/2
@@ -64,7 +64,7 @@ int    kca_solve_init_stats(kca_state *ks, int num_candidates);
 int    kca_solve_body(kca_state *ks, int max_gens);
 int    kca_solve_generate_new_candidates(kca_state *ks);
 int    kca_solve_merge_new_generation(kca_state *ks);
-int    kca_solve_update_lit_avg(kca_state *ks, int num_firstfruits);
+int    kca_solve_update_lit_count(kca_state *ks);
 int    kca_solve_reset_stats(kca_state *ks);
 int    kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice);
 int    kca_solve_score_candidates(kca_state *ks);

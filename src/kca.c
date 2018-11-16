@@ -27,12 +27,12 @@
 //                        V  scores
 //                  lit_avg
 //
-//  Given M/2 initialized, sorted candidates (left-hand matrix) and lit_avg_array:
+//  Given M/2 initialized, sorted candidates (left-hand matrix) and lit_count_array:
 //
 //  for cand_id = M/2+1 to M:
 //      curr_cand = candidate_list[cand_id]
 //      for lit_id = lit0 to litN:
-//          set curr_cand[lit_id] = rand_bent_coin(lit_avg_array[lit_id] / whatever)
+//          set curr_cand[lit_id] = rand_bent_coin(lit_count_array[lit_id] / whatever)
 //          update cand score:
 //              update sat_count (use lit_clause_map[lit_id])
 //              update pos/neg_counts (use ks->st->cl->variables[lit_id])
@@ -50,7 +50,7 @@
 //  for each literal (lit_id):
 //      for 0 to M/2:
 //          sum positive settings
-//      update lit_avg_array[lit_id] from sum
+//      update lit_count_array[lit_id] from sum
 
 //
 //
@@ -68,8 +68,8 @@ int kca_solve_init(kca_state *ks, int num_candidates){
 
     kca_solve_init_matrices(ks, num_candidates);
     kca_solve_init_lh_score_map(ks, num_candidates);
-    kca_solve_init_clause_map(ks, num_candidates);
     kca_solve_init_stats(ks, num_candidates);
+    kca_solve_init_clause_map(ks, num_candidates);
 
 }
 
@@ -79,18 +79,18 @@ int kca_solve_init(kca_state *ks, int num_candidates){
 //
 int kca_solve_body(kca_state *ks, int max_gens){
 
-    int num_firstfruits;
+//    kca_solve_update_lit_count(ks);
 
     while(max_gens--){
 
+        // sort new candidates and merge firstfruits, if any, into lh_matrix
+        kca_solve_merge_new_generation(ks);
+
+        // recalculate lit_count of new entries in lh_matrix
+        kca_solve_update_lit_count(ks);
+
         // generate next batch of candidates, scoring is performed during generation
         kca_solve_generate_new_candidates(ks);
-
-        // sort new candidates and merge firstfruits, if any, into lh_matrix
-        num_firstfruits = kca_solve_merge_new_generation(ks);
-
-        // recalculate lit_avg of new entries in lh_matrix
-        kca_solve_update_lit_avg(ks, num_firstfruits);
 
     }
 
@@ -113,7 +113,7 @@ int kca_solve_init_matrices(kca_state *ks, int num_candidates){
     // create lh_matrix rows...
     for(i=0; i < ks->st->cl->num_assignments; i++){
         new_literal = mem_new_str(ks->be, num_candidates/2, '\0');
-        kca_rand_literal(ks, new_literal);
+//        kca_rand_literal(ks, new_literal);
         ldp(lh_matrix, i) = new_literal;
     }
 
@@ -123,6 +123,7 @@ int kca_solve_init_matrices(kca_state *ks, int num_candidates){
     for(i=0; i < num_candidates/2; i++){
         score = _val(ks->be, 0);
         new_candidate = mem_new_str(ks->be, ks->st->cl->num_assignments, '\0');
+        kca_rand_candidate(ks, new_candidate);
         ldp(rh_matrix, i) = list_cons(ks->be, score, new_candidate);
     }
 
@@ -140,7 +141,7 @@ int kca_solve_init_lh_score_map(kca_state *ks, int num_candidates){
     mword *lh_score_map = mem_new_ptr(ks->be, num_candidates/2);
 
     int i;
-    for(i=0; i<num_candidates; i++){
+    for(i=0; i<num_candidates/2; i++){
         ldp(lh_score_map,i) 
             = list_cons(ks->be, _val(ks->be, 0), _val(ks->be, i));
     }
@@ -156,16 +157,18 @@ int kca_solve_init_stats(kca_state *ks, int num_candidates){
 
     int i;
 
-    ks->sat_count_array  = mem_new_val(ks->be, num_candidates/2, 0);
-    ks->lit_avg_array    = mem_new_val(ks->be, ks->st->cl->num_assignments, 0);
-    ks->rh_score_array   = mem_new_val(ks->be, ks->num_candidates/2, 0);
+    ks->sat_count_array = mem_new_val(ks->be, num_candidates/2, 0);
+    ks->lit_count_array = mem_new_val(ks->be, ks->st->cl->num_assignments, 0);
+
+    for(i=0; i < ks->st->cl->num_assignments; i++)
+        ldv(ks->lit_count_array,i) = (num_candidates/4);
 
     ks->var_pos_count_array = mem_new_ptr(ks->be, num_candidates/2);
     ks->var_neg_count_array = mem_new_ptr(ks->be, num_candidates/2);
 
     for(i=0; i < num_candidates/2; i++){
-        ldp(ks->var_pos_count_array,i) = mem_new_str(ks->be, ks->st->cl->num_variables, '\0');
-        ldp(ks->var_neg_count_array,i) = mem_new_str(ks->be, ks->st->cl->num_variables, '\0');
+        ldp(ks->var_pos_count_array,i) = mem_new_str(ks->be, ks->st->cl->num_variables+1, '\0');
+        ldp(ks->var_neg_count_array,i) = mem_new_str(ks->be, ks->st->cl->num_variables+1, '\0');
     }
 
 }
@@ -203,18 +206,18 @@ int kca_solve_init_clause_map(kca_state *ks, int num_candidates){
 //
 int kca_solve_generate_new_candidates(kca_state *ks){
 
-    int first_cand_id = ks->num_candidates/2 + 1;
+//    int first_cand_id = (ks->num_candidates/2) + 1;
     unsigned char *curr_cand;
     var_state lit_choice;
 
     int i,j;
 
     // FIXME: Is this needed?:
-    kca_solve_reset_stats(ks);
+//    kca_solve_reset_stats(ks);
 
-    for(i = first_cand_id; i < ks->num_candidates; i++){
+    for(i = 0; i < (ks->num_candidates/2); i++){
 
-        curr_cand = (unsigned char*)rdp(ks->rh_matrix, i);
+        curr_cand = (unsigned char*)pcdr(rdp(ks->rh_matrix, i));
 
         for(j=0; j < ks->st->cl->num_assignments; j++){
             lit_choice = kca_rand_lit(ks, j);
@@ -231,6 +234,7 @@ int kca_solve_generate_new_candidates(kca_state *ks){
 }
 
 
+#if 0
 // FIXME: This function is useless!!!
 //
 int kca_solve_reset_stats(kca_state *ks){
@@ -241,7 +245,7 @@ int kca_solve_reset_stats(kca_state *ks){
 
     for(i=0; i < ks->num_candidates/2; i++){
         ks->sat_count_array[i] = 0;
-        ks->rh_score_array[i] = 0;
+//        ks->rh_score_array[i] = 0;
     }
 
     for(i=0; i < ks->num_candidates/2; i++){
@@ -256,15 +260,19 @@ int kca_solve_reset_stats(kca_state *ks){
     ks->last_sat_clause = -1;
 
 }
-
+#endif
 
 //
 //
 int kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state lit_choice){
 
+    int var_id = abs(rdv(ks->st->cl->variables, lit_id));
+    unsigned char *var_count;
+
     if(((int)rdv(ks->st->cl->variables,lit_id) > 0)
         && (lit_choice == DEC_ASSIGN1_VS)){
-            ks->var_pos_count_array[cand_id]++;
+            var_count = (unsigned char*)rdp(ks->var_pos_count_array, cand_id);
+            var_count[var_id]++;
             if(ks->last_sat_clause < ks->lit_clause_map[lit_id]){
                 ks->sat_count_array[cand_id]++;
                 ks->last_sat_clause = ks->lit_clause_map[lit_id];
@@ -272,7 +280,8 @@ int kca_solve_update_counts(kca_state *ks, int cand_id, int lit_id, var_state li
     }
     else if(((int)rdv(ks->st->cl->variables,lit_id) < 0)
         && (lit_choice == DEC_ASSIGN0_VS)){
-            ks->var_neg_count_array[cand_id]++;
+            var_count = (unsigned char*)rdp(ks->var_neg_count_array, cand_id);
+            var_count[var_id]++;
             if(ks->last_sat_clause < ks->lit_clause_map[lit_id]){
                 ks->sat_count_array[cand_id]++;
                 ks->last_sat_clause = ks->lit_clause_map[lit_id];
@@ -291,10 +300,12 @@ int kca_solve_score_candidates(kca_state *ks){
     //      rh_score_array[cand_id] = sls_kca_score(sat_count, pos_count_array, neg_count_array)
     int i;
     mword *cand_score;
+    float score;
 
     for(i=0; i < ks->num_candidates/2; i++){
-        cand_score = (ks->rh_score_array+i);
-        *(float*)cand_score = kca_candidate_score(ks, i);
+        cand_score = pcar(rdp(ks->rh_matrix,i));
+        score = kca_candidate_score(ks, i);
+        *(float*)cand_score = score;
     }
 
 }
@@ -362,7 +373,7 @@ float kca_clause_score(kca_state *ks, int sat_count){
 //
 var_state kca_rand_lit(kca_state *ks, int lit_id){
 
-    float p = (float)ks->lit_avg_array[0] / (ks->num_candidates/2);
+    float p = (float)ks->lit_count_array[lit_id] / (ks->num_candidates/2);
 
     if(rand_bent_coin(p))
         return DEC_ASSIGN1_VS;
@@ -379,54 +390,89 @@ int kca_solve_merge_new_generation(kca_state *ks){
     int num_firstfruits=0;
     float curr_lh_score;
     float curr_rh_score;
-
+_trace;
     // calculate num_firstfruits
     int lh_index = (ks->num_candidates/2)-1; // consider sorting in major order
     int rh_index = 0;
     int lh_cand_id;
+_trace;
 
     curr_lh_score = *(float*)pcar(rdp(ks->lh_score_map, lh_index));
-    curr_rh_score = *(float*)(ks->rh_score_array+rh_index);
+    curr_rh_score = *(float*)pcar(rdp(ks->rh_matrix, rh_index));
+_trace;
 
     while(curr_lh_score < curr_rh_score){
+_trace;
         num_firstfruits++;
         if((lh_index == 0) || (rh_index == ks->num_candidates/2))
             break;
         lh_index--;
         rh_index++;
         curr_lh_score = *(float*)pcar(rdp(ks->lh_score_map, lh_index));
-        curr_rh_score = *(float*)(ks->rh_score_array+rh_index);
+        curr_rh_score = *(float*)pcar(rdp(ks->rh_matrix, rh_index));
     }
+_dd(num_firstfruits);
 
-    char *lh_lit;
-    char *rh_lit;
+    unsigned char *lh_lit;
+    unsigned char *rh_lit;
 
     // overwrite worst lh_matrix candidates with best rh_matrix candidates
     // XXX THIS IS THE SLOW LOOP XXX
     int i,j;
+_trace;
     lh_index = (ks->num_candidates/2)-1; // consider sorting in major order
     for(i=0; i<num_firstfruits; i++){
+_trace;
         lh_cand_id = rdv(pcdr(rdp(ks->lh_score_map, lh_index)),0);
-        rh_lit = (char*)pcdr(rdp(ks->rh_matrix, i));
+        rh_lit = (unsigned char*)pcdr(rdp(ks->rh_matrix, i));
         for(j=0; j < ks->st->cl->num_assignments; j++){
-            lh_lit = (char*)rdp(ks->lh_matrix,j);
+_trace;
+            lh_lit = (unsigned char*)rdp(ks->lh_matrix, j);
             lh_lit[lh_cand_id] = rh_lit[j]; // Ouch! :(
         }
-        ldv(pcar(rdp(ks->lh_score_map, lh_index)),0) = rdv(ks->rh_score_array,i);
+        ldv(pcar(rdp(ks->lh_score_map, lh_index)),0) = rdv(pcar(rdp(ks->rh_matrix, i)),0);
         lh_index--;
     }
+_trace;
+
+    // qsort the lh_score_map
+    qsort(ks->lh_score_map, ks->num_candidates/2, sizeof(mword), cmp_kca_score);
+_trace;
 
     return num_firstfruits;
 
 }
 
 
+// NOTE: don't necessarily need to perform this update on every generation
 //
-//
-int kca_solve_update_lit_avg(kca_state *ks, int num_firstfruits){
+int kca_solve_update_lit_count(kca_state *ks){
 
+    int i,j;
+    unsigned char *curr_lit;
+    int lit_count;
 
+    for(i=0; i < ks->st->cl->num_assignments; i++){
 
+        curr_lit = (unsigned char*)rdp(ks->lh_matrix,i);
+        lit_count=0;
+
+        if( (int)rdv(ks->st->cl->variables, i) > 0 ){
+            for(j=0; j < ks->num_candidates/2; j++){
+                if(curr_lit[j] == DEC_ASSIGN1_VS)
+                    lit_count++;
+            }
+        }
+        else{ // (int)rdv(ks->st->cl->variables, i) > 0
+            for(j=0; j < ks->num_candidates/2; j++){
+                if(curr_lit[j] == DEC_ASSIGN0_VS)
+                    lit_count++;
+            }
+        }
+
+        ldv(ks->lit_count_array,i) = lit_count;
+
+    }
 }
 
 
@@ -438,9 +484,9 @@ void kca_rand_candidate(kca_state *ks, mword *candidate){
     int i;
     int rand_val;
 
-    char *var_array = (char*)candidate;
+    unsigned char *var_array = (unsigned char*)candidate;
 
-    for(i=1; i<=num_literals; i++){
+    for(i=0; i<num_literals; i++){
         rand_val = (mword)sls_mt_rand();
         if(rand_val % 2)
             var_array[i] = DEC_ASSIGN0_VS;

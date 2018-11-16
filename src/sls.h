@@ -51,7 +51,7 @@ typedef struct{
     //              loop, as well
     mword *var_pos_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
     mword *var_neg_count_array; // [ptr [val  ] ... ] : size=num_candidates/2 x num_variables
-    mword *lit_avg_array;       // [val  ]            : size=num_assignments
+    mword *lit_count_array;       // [val  ]            : size=num_assignments
     mword *sat_count_array;     // [val8 ]            : size=num_candidates/2
     mword *lh_score_map;        // [ptr [ptr [val <score> ] [val <cand_id> ] ] ... ] : size=num_candidates/2 x 2
 
