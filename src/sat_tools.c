@@ -30,7 +30,7 @@ int cmp_abs_int(const void *a, const void *b){
 
 //
 //
-void st_init(babel_env *be, st_state *bs){
+void st_init(babel_env *be, st_state *st){
 
     // clause_list               --> [init_clause_array]          --> raw_clause_array
     //
@@ -43,69 +43,86 @@ void st_init(babel_env *be, st_state *bs){
     // reordered_clause_array --+--> [init_permute_variables] --+--> clause_array
     //                                                          +--> var_clause_map
 
-    clause_list *cl = bs->cl;
+    clause_list *cl = st->cl;
 
-    bs->curr_var         = 0;
-    bs->dev_ctr          = 0;
-    bs->dev_break        = 0;
-    bs->clause_sat_count = 0;
+    st->curr_var         = 0;
+    st->dev_ctr          = 0;
+    st->dev_break        = 0;
+    st->clause_sat_count = 0;
 
-    bs->clause_sat = mem_new_str(be, bs->cl->num_clauses, '\0');
+    st->clause_sat = mem_new_str(be, st->cl->num_clauses, '\0');
 
-    st_init_var_array(be, bs);
-    st_init_solver_stack(be, bs);
-    st_init_ucb_arrays(be, bs);
-    st_init_clause_array(be, bs);
-    st_init_var_clause_map(be, bs);
-    st_init_weights(be, bs);
-    st_init_reorder_clause_array(be, bs);
-    st_init_permute_variables(be, bs);
-    st_init_var_prop_clause_map(be, bs);
-    st_init_var_prop_var_map(be, bs);
-    st_init_var_edit_list(be, bs);
+    st_init_var_array(be, st);
+    st_init_solver_stack(be, st);
+
+//    st_init_ucb_arrays(be, st);
+//    st_init_weights(be, st);
+
+    st_init_raw_clause_array(be, st);
+
+st->clause_array   = st->raw_clause_array;
+
+    st_init_raw_var_clause_map(be, st);
+
+st->var_clause_map = st->raw_var_clause_map;
+
+    st_init_reorder_clause_array(be, st);
+
+st->clause_array   = st->reorder_clause_array;
+st->var_clause_map = st->reorder_var_clause_map;
+
+    st_init_permute_variables(be, st);
+
+st->clause_array   = st->permute_clause_array;
+st->var_clause_map = st->permute_var_clause_map;
+
+    st_init_var_prop_clause_map(be, st);
+    st_init_var_prop_var_map(be, st);
+
+    st_init_var_edit_list(be, st);
 
 }
 
 
 //
 //
-void st_init_var_array(babel_env *be, st_state *bs){
+void st_init_var_array(babel_env *be, st_state *st){
 
     // Note: UNASSIGNED_VS must be first element of var_state enum declaration
     // to ensure that it is assigned integer value 0
-    bs->var_array = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    st->var_array = mem_new_str(be, st->cl->num_variables+1, '\0');
 
 }
 
 
 //
 //
-void st_init_solver_stack(babel_env *be, st_state *bs){
+void st_init_solver_stack(babel_env *be, st_state *st){
 
-    bs->solver_stack     = mem_new_str(be, bs->cl->num_variables+1, '\0');
-    bs->assignment_stack = mem_new_str(be, bs->cl->num_variables+1, '\0');
-    bs->branch_history   = mem_new_str(be, bs->cl->num_variables+1, '\0');
-
-}
-
-
-//
-//
-void st_init_ucb_arrays(babel_env *be, st_state *bs){
-
-    bs->num_attempts_0 = mem_new_str(be, bs->cl->num_variables+1, '\0');
-    bs->num_attempts_1 = mem_new_str(be, bs->cl->num_variables+1, '\0');
-    bs->reward_0       = mem_new_str(be, bs->cl->num_variables+1, '\0');
-    bs->reward_1       = mem_new_str(be, bs->cl->num_variables+1, '\0');
+    st->solver_stack     = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->assignment_stack = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->branch_history   = mem_new_str(be, st->cl->num_variables+1, '\0');
 
 }
 
 
 //
 //
-void st_init_clause_array(babel_env *be, st_state *bs){
+void st_init_ucb_arrays(babel_env *be, st_state *st){
 
-    clause_list *cl = bs->cl;
+    st->num_attempts_0 = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->num_attempts_1 = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->reward_0       = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->reward_1       = mem_new_str(be, st->cl->num_variables+1, '\0');
+
+}
+
+
+//
+//
+void st_init_raw_clause_array(babel_env *be, st_state *st){
+
+    clause_list *cl = st->cl;
 
     int i,j,k;
     int last_clause_index=0;
@@ -153,22 +170,22 @@ void st_init_clause_array(babel_env *be, st_state *bs){
         qsort(rdp(raw_clause_array,i), size(rdp(raw_clause_array,i)), sizeof(mword), cmp_abs_int);
     }
 
-    bs->raw_clause_array = raw_clause_array;
+    st->raw_clause_array = raw_clause_array;
 
 }
 
 
 //
 //
-void st_init_var_clause_map(babel_env *be, st_state *bs){
+void st_init_raw_var_clause_map(babel_env *be, st_state *st){
 
     int i,j,k;
-    clause_list *cl = bs->cl;
+    clause_list *cl = st->cl;
 
-    mword *raw_clause_array = bs->raw_clause_array;
+    mword *clause_array = st->clause_array;
 
     mword *clause_trie = trie_new(be);
-    mword clause_array_size = size(raw_clause_array);
+    mword clause_array_size = size(clause_array);
     mword curr_clause_size;
 
     mword *trie_entry;
@@ -182,7 +199,7 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
     for(i=0;i<clause_array_size;i++){
 
-        curr_clause = rdp(raw_clause_array,i);
+        curr_clause = rdp(clause_array,i);
         curr_clause_size = size(curr_clause);
 
         for(j=0;j<curr_clause_size;j++){
@@ -236,9 +253,9 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
     }
 
-    bs->raw_var_clause_map = raw_var_clause_map;
-    bs->lit_pos_clause_map = lit_pos_clause_map;
-    bs->lit_neg_clause_map = lit_neg_clause_map;
+    st->raw_var_clause_map = raw_var_clause_map;
+    st->lit_pos_clause_map = lit_pos_clause_map;
+    st->lit_neg_clause_map = lit_neg_clause_map;
 
 }
 
@@ -246,12 +263,12 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 #if 0
 //
 //
-void st_init_var_clause_map(babel_env *be, st_state *bs){
+void st_init_var_clause_map(babel_env *be, st_state *st){
 
     int i,j,k;
-    clause_list *cl = bs->cl;
+    clause_list *cl = st->cl;
 
-    mword *raw_clause_array = bs->raw_clause_array;
+    mword *raw_clause_array = st->raw_clause_array;
 
     mword *clause_trie = trie_new(be);
     mword clause_array_size = size(raw_clause_array);
@@ -304,7 +321,7 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
     }
 
-    bs->raw_var_clause_map = raw_var_clause_map;
+    st->raw_var_clause_map = raw_var_clause_map;
 
 }
 #endif
@@ -312,7 +329,7 @@ void st_init_var_clause_map(babel_env *be, st_state *bs){
 
 //
 //
-void st_init_weights(babel_env *be, st_state *bs){
+void st_init_weights(babel_env *be, st_state *st){
 
     double sum_var_weight;
     double var_weight;
@@ -320,24 +337,24 @@ void st_init_weights(babel_env *be, st_state *bs){
     int num_lit_occ;
     int var_id;
 
-    mword *var_lit_weights = mem_new_val(be, bs->cl->num_variables+1, 0);
+    mword *var_lit_weights = mem_new_val(be, st->cl->num_variables+1, 0);
 
     int i,j;
-    for(i=1; i <= bs->cl->num_variables; i++){
-        num_lit_occ = size(rdp(bs->raw_var_clause_map,i));
-        var_weight = (double)num_lit_occ / bs->cl->num_assignments;
+    for(i=1; i <= st->cl->num_variables; i++){
+        num_lit_occ = size(rdp(st->raw_var_clause_map,i));
+        var_weight = (double)num_lit_occ / st->cl->num_assignments;
         *((double*)var_lit_weights+i) = var_weight;
 //        _dd(i);
 //        _df(var_weight);
     }
 
-    mword *clause_weights = mem_new_val(be, bs->cl->num_clauses, 0);
+    mword *clause_weights = mem_new_val(be, st->cl->num_clauses, 0);
     mword *clause;
     mword  clause_size;
 
-    for(i=0; i<bs->cl->num_clauses; i++){
+    for(i=0; i<st->cl->num_clauses; i++){
 
-        clause = rdp(bs->raw_clause_array,i);
+        clause = rdp(st->raw_clause_array,i);
         clause_size = size(clause);
         sum_var_weight = 0;
 
@@ -361,13 +378,13 @@ void st_init_weights(babel_env *be, st_state *bs){
 
 //
 //
-void st_init_reorder_clause_array(babel_env *be, st_state *bs){
+void st_init_reorder_clause_array(babel_env *be, st_state *st){
 
     // FIXME:
     //      sort by score, not clause-length
     //      score is calculated as:
     //          (2^-clause_length) * (SUM [var_weights in this clause])
-    mword *sort_clause_array = bstruct_cp(be, bs->raw_clause_array);
+    mword *sort_clause_array = bstruct_cp(be, st->raw_clause_array);
 //    qsort(sort_clause_array, size(sort_clause_array), sizeof(mword), cmp_size);
 
     int i,j;
@@ -375,7 +392,7 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
     mword *bfs_clause_array     = mem_new_ptr(be, size(sort_clause_array));
     mword *reorder_clause_array = mem_new_ptr(be, size(sort_clause_array));
 
-    for(i=0; i<bs->cl->num_clauses; i++){
+    for(i=0; i<st->cl->num_clauses; i++){
         ldp(bfs_clause_array, i) = rdp(sort_clause_array, i);
     }
 
@@ -396,7 +413,7 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
     mword  num_clauses;
     mword  clause_id;
     mword  reorder_clause_id = 0;
-    mword *reorder_clause_id_map = mem_new_val(be, bs->cl->num_clauses, 0);
+    mword *reorder_clause_id_map = mem_new_val(be, st->cl->num_clauses, 0);
 
     int counter = 0;
     int depth;
@@ -405,7 +422,7 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
 
         curr_clause_id = rdv( st_dequeue(be, clause_queue), 0 );
 
-        curr_clause = rdp(bs->raw_clause_array, curr_clause_id);
+        curr_clause = rdp(st->raw_clause_array, curr_clause_id);
         ldp(bfs_clause_array, curr_clause_id) = be->nil;
         num_clause_vars = size(curr_clause);
 
@@ -416,7 +433,7 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
         // for each var_id in curr_clause:
         for(i=0; i<num_clause_vars; i++){
 
-            clauses = rdp(bs->raw_var_clause_map, abs(rdv(curr_clause,i)));
+            clauses = rdp(st->raw_var_clause_map, abs(rdv(curr_clause,i)));
             num_clauses = size(clauses);
 
             // for each clause containing var_id:
@@ -438,13 +455,13 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
 
     }
 
-    bs->reorder_clause_array = reorder_clause_array;
+    st->reorder_clause_array = reorder_clause_array;
 
-    mword *reorder_var_clause_map = mem_new_ptr(be, bs->cl->num_variables+1);
+    mword *reorder_var_clause_map = mem_new_ptr(be, st->cl->num_variables+1);
     mword *new_clauses;
 
-    for(i=1; i <= bs->cl->num_variables; i++){
-        clauses = rdp(bs->raw_var_clause_map, i);
+    for(i=1; i <= st->cl->num_variables; i++){
+        clauses = rdp(st->raw_var_clause_map, i);
         num_clauses = size(clauses);
         if(num_clauses == 0)
             continue;
@@ -455,8 +472,8 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
         ldp(reorder_var_clause_map, i) = new_clauses;
     }
 
-    bs->reorder_var_clause_map = reorder_var_clause_map;
-    bs->reorder_clause_id_map = reorder_clause_id_map;
+    st->reorder_var_clause_map = reorder_var_clause_map;
+    st->reorder_clause_id_map  = reorder_clause_id_map;
 
 }
 
@@ -464,9 +481,9 @@ void st_init_reorder_clause_array(babel_env *be, st_state *bs){
 // precondition: need to have var_clause_map, based on reorder_clause_array
 // postcondition: Will need to generate fresh var_clause_map based on reorder_var_array
 //
-void st_init_permute_variables(babel_env *be, st_state *bs){
+void st_init_permute_variables(babel_env *be, st_state *st){
 
-    mword *permute_var_array = mem_new_val(be, bs->cl->num_variables+1, 0);
+    mword *permute_var_array = mem_new_val(be, st->cl->num_variables+1, 0);
     mword curr_var=1;
 
     mword *clause;
@@ -474,9 +491,9 @@ void st_init_permute_variables(babel_env *be, st_state *bs){
     mword  var_id;
 
     int i,j;
-    for(i=0; i<bs->cl->num_clauses; i++){
+    for(i=0; i<st->cl->num_clauses; i++){
 
-        clause = rdp(bs->raw_clause_array, i);
+        clause = rdp(st->clause_array, i);
         num_vars = size(clause);
 
         // for each var_id in clause:
@@ -493,25 +510,25 @@ void st_init_permute_variables(babel_env *be, st_state *bs){
 
     }
 
-    bs->permute_var_array = permute_var_array;
+    st->permute_var_array = permute_var_array;
 
-    mword *unpermute_var_array = mem_new_val(be, bs->cl->num_variables+1, 0);
+    mword *unpermute_var_array = mem_new_val(be, st->cl->num_variables+1, 0);
 
-    for(i=1; i<=bs->cl->num_variables; i++){
+    for(i=1; i<=st->cl->num_variables; i++){
         var_id = rdv(permute_var_array, i);
         ldv(unpermute_var_array, var_id) = i;
     }
 
-    bs->unpermute_var_array = unpermute_var_array;
+    st->unpermute_var_array = unpermute_var_array;
 
     mword  new_var_id;
     mword *new_clause;
-    mword *clause_array = mem_new_ptr(be,bs->cl->num_clauses);
+    mword *clause_array = mem_new_ptr(be,st->cl->num_clauses);
 
-    // permute each variable while copying raw_clause_array --> clause_array
-    for(i=0; i<bs->cl->num_clauses; i++){
+    // permute each variable while copying clause_array --> clause_array
+    for(i=0; i<st->cl->num_clauses; i++){
 
-        clause = rdp(bs->raw_clause_array, i);
+        clause = rdp(st->clause_array, i);
         num_vars = size(clause);
 
         new_clause = mem_new_val(be, num_vars, 0);
@@ -531,37 +548,31 @@ void st_init_permute_variables(babel_env *be, st_state *bs){
 
     }
 
-    mword *var_clause_map = mem_new_ptr(be,bs->cl->num_variables+1);
+    mword *var_clause_map = mem_new_ptr(be,st->cl->num_variables+1);
 
-    // copy raw_var_clause_map to var_clause_map, re-arranging entries by
+    // copy var_clause_map to var_clause_map, re-arranging entries by
     // permute_var_array while copying
-    for(i=1; i<bs->cl->num_variables+1; i++){
+    for(i=1; i<st->cl->num_variables+1; i++){
         // old     --> new
         // index 4 --> index 1
         new_var_id = permute_var_array[i];
-        ldp(var_clause_map, new_var_id) = rdp(bs->raw_var_clause_map, i);
+        ldp(var_clause_map, new_var_id) = rdp(st->var_clause_map, i);
     }
 
-    bs->dev_reorder_clause_array    = clause_array;
-    bs->dev_permute_var_clause_map = var_clause_map;
+    st->dev_reorder_clause_array    = clause_array;
+    st->dev_permute_var_clause_map = var_clause_map;
 
-    bs->clause_array   = bs->raw_clause_array;
-    bs->var_clause_map = bs->raw_var_clause_map;
-
-//    bs->clause_array = clause_array;
-//    bs->var_clause_map = var_clause_map;
-
-//bs->dev_ptr = permute_var_array;
-//longjmp(*bs->dev_jmp, 0);
+    st->permute_clause_array   = clause_array;
+    st->permute_var_clause_map = var_clause_map;
 
 }
 
 
 //
 //
-void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
+void st_init_var_prop_clause_map(babel_env *be, st_state *st){
 
-    clause_list *cl = bs->cl;
+    clause_list *cl = st->cl;
 
     mword *var_prop_clause_map = mem_new_ptr(be, cl->num_variables+1);
     mword *var_propagate_entry;
@@ -572,7 +583,7 @@ void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
 
     int i,j,k;
 
-    mword *clause_array = bs->clause_array;
+    mword *clause_array = st->clause_array;
     mword clause_size;
 
     for(i=0; i < cl->num_clauses; i++){
@@ -619,7 +630,7 @@ void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
     
     for(i=1; i <= cl->num_variables; i++){
 
-        cnf_var_write(bs, i, DEC_ASSIGN0_VS);
+        cnf_var_write(st, i, DEC_ASSIGN0_VS);
 
         curr = rdp(var_prop_clause_map, i);
         head = be->nil;
@@ -634,7 +645,7 @@ void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
 
             all_assigned = 1;
             for(j=0; j<clause_size-1; j++){
-                if(!cnf_var_assigned(bs, abs(rdv(clause,j)))){
+                if(!cnf_var_assigned(st, abs(rdv(clause,j)))){
                     all_assigned = 0;
                     break;
                 }
@@ -661,7 +672,7 @@ void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
     }
 
     for(i=1; i <= cl->num_variables; i++)
-        cnf_var_write(bs, i, UNASSIGNED_VS);
+        cnf_var_write(st, i, UNASSIGNED_VS);
 
     mword *temp;
     for(i=1; i <= cl->num_variables; i++){
@@ -672,16 +683,16 @@ void st_init_var_prop_clause_map(babel_env *be, st_state *bs){
         ldp(var_prop_clause_map,i) = temp;
     }
 
-    bs->var_prop_clause_map = var_prop_clause_map;
+    st->var_prop_clause_map = var_prop_clause_map;
 
 }
 
 
 //
 //
-void st_init_var_prop_var_map(babel_env *be, st_state *bs){
+void st_init_var_prop_var_map(babel_env *be, st_state *st){
 
-    clause_list *cl = bs->cl;
+    clause_list *cl = st->cl;
 
     int i,j;
 
@@ -695,7 +706,7 @@ void st_init_var_prop_var_map(babel_env *be, st_state *bs){
 
     for(i=1; i <= cl->num_variables; i++){
 
-        clause_list = rdp(bs->var_prop_clause_map,i);
+        clause_list = rdp(st->var_prop_clause_map,i);
 
         if(is_nil(clause_list))
             continue;
@@ -706,7 +717,7 @@ void st_init_var_prop_var_map(babel_env *be, st_state *bs){
 
         for(j=0; j<clause_list_size; j++){
 
-            clause = rdp(bs->clause_array, rdv(clause_list, j));
+            clause = rdp(st->clause_array, rdv(clause_list, j));
             clause_size = size(clause);
 
             prop_var = rdv(clause,clause_size-1);
@@ -719,14 +730,14 @@ void st_init_var_prop_var_map(babel_env *be, st_state *bs){
 
     }
 
-    bs->var_prop_var_map = var_prop_var_map;
+    st->var_prop_var_map = var_prop_var_map;
 
 }
 
 
 //
 //
-void st_init_var_edit_list(babel_env *be, st_state *bs){
+void st_init_var_edit_list(babel_env *be, st_state *st){
 
     int i,j;
 
@@ -734,14 +745,14 @@ void st_init_var_edit_list(babel_env *be, st_state *bs){
     mword  var_list_size;
     mword  curr_offset = 0;
 
-    mword *var_edit_offsets = mem_new_val(be, bs->cl->num_variables+1, 0);
+    mword *var_edit_offsets = mem_new_val(be, st->cl->num_variables+1, 0);
 
     // zero out all entries
-    for(i=1; i <= bs->cl->num_variables; i++){
+    for(i=1; i <= st->cl->num_variables; i++){
 
         ldv(var_edit_offsets, i) = curr_offset;
 
-        var_list = rdp(bs->var_prop_var_map, i);
+        var_list = rdp(st->var_prop_var_map, i);
 
         if(is_nil(var_list))
             var_list_size = 0;
@@ -752,8 +763,8 @@ void st_init_var_edit_list(babel_env *be, st_state *bs){
 
     }
 
-    bs->var_edit_offsets = var_edit_offsets;
-    bs->var_edit_list    = mem_new_str(be, curr_offset, '\0');
+    st->var_edit_offsets = var_edit_offsets;
+    st->var_edit_list    = mem_new_str(be, curr_offset, '\0');
 
 }
 

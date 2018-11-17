@@ -56,10 +56,13 @@ typedef struct{
     mword *raw_clause_array;     // stores each clause (its variables)
     mword *raw_var_clause_map;   // maps each variable to the clause_id's in which it appears
 
-    mword *reorder_clause_array; // clause_array, sorted by clause-score
+    mword *reorder_clause_array;
     mword *reorder_var_clause_map; 
     mword *reorder_clause_id_map; 
-    mword *permute_var_array;    // breadth-first-traversal of graph, based on reorder_clause_array
+
+    mword *permute_clause_array;
+    mword *permute_var_clause_map; 
+    mword *permute_var_array;
     mword *unpermute_var_array;
 
     mword *clause_sat;
@@ -91,20 +94,20 @@ typedef struct{
 int  cmp_abs_int(const void *a, const void *b);
 int cmp_size(const void *a, const void *b);
 
-//int  st_solve(babel_env *be, st_state *bs);
+//int  st_solve(babel_env *be, st_state *st);
 
-void st_init(babel_env *be, st_state *bs);
-void st_init_var_array(babel_env *be, st_state *bs);
-void st_init_solver_stack(babel_env *be, st_state *bs);
-void st_init_ucb_arrays(babel_env *be, st_state *bs);
-void st_init_clause_array(babel_env *be, st_state *bs);
-void st_init_var_clause_map(babel_env *be, st_state *bs);
-void st_init_weights(babel_env *be, st_state *bs);
-void st_init_reorder_clause_array(babel_env *be, st_state *bs);
-void st_init_permute_variables(babel_env *be, st_state *bs);
-void st_init_var_prop_clause_map(babel_env *be, st_state *bs);
-void st_init_var_prop_var_map(babel_env *be, st_state *bs);
-void st_init_var_edit_list(babel_env *be, st_state *bs);
+void st_init(babel_env *be, st_state *st);
+void st_init_var_array(babel_env *be, st_state *st);
+void st_init_solver_stack(babel_env *be, st_state *st);
+void st_init_ucb_arrays(babel_env *be, st_state *st);
+void st_init_raw_clause_array(babel_env *be, st_state *st);
+void st_init_raw_var_clause_map(babel_env *be, st_state *st);
+void st_init_weights(babel_env *be, st_state *st);
+void st_init_reorder_clause_array(babel_env *be, st_state *st);
+void st_init_permute_variables(babel_env *be, st_state *st);
+void st_init_var_prop_clause_map(babel_env *be, st_state *st);
+void st_init_var_prop_var_map(babel_env *be, st_state *st);
+void st_init_var_edit_list(babel_env *be, st_state *st);
 
 mword *st_queue_new(babel_env *be);
 void   st_enqueue(babel_env *be, mword *queue, mword *payload);
