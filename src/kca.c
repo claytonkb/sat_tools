@@ -10,48 +10,6 @@
 
 // kca-hybrid
 
-//            c c       c             c
-//            a a       a             a
-//            n n . . . n    . . .    n
-//            d d       d             d
-//            0 1       M/2           M
-//
-//     lit0   - - - ... ->o | | | ... |
-//     lit1   - - - ... ->o | | | ... |
-//     lit2   - - - ... ->o | | | ... |
-//      .       .         o   .      
-//      .          .      o      .   
-//      .             .   o         .
-//     litN   - - - ... ->o | | | ... |
-//                        V v v v     v
-//                        V  scores
-//                  lit_avg
-//
-//  Given M/2 initialized, sorted candidates (left-hand matrix) and lit_count_array:
-//
-//  for cand_id = M/2+1 to M:
-//      curr_cand = candidate_list[cand_id]
-//      for lit_id = lit0 to litN:
-//          set curr_cand[lit_id] = rand_bent_coin(lit_count_array[lit_id] / whatever)
-//          update cand score:
-//              update sat_count (use lit_clause_map[lit_id])
-//              update pos/neg_counts (use ks->st->cl->variables[lit_id])
-//      rh_score_array[cand_id] = cand score
-//
-//  qsort the right-hand matrix by candidate score
-//  find the copy threshold between the matrices
-//  copy over the new candidates that will survive this round, if any
-//      for each new candidate to be copied:
-//          next_index = index of next-lowest-scoring candidate in lh_matrix
-//          copy new candidate into lh_matrix at index
-//          copy new candidate's score into candidate_lh_score_map at the appropriate index
-//  qsort the left-hand matrix (that is, qsort candidate_lh_score_map by score)
-//
-//  for each literal (lit_id):
-//      for 0 to M/2:
-//          sum positive settings
-//      update lit_count_array[lit_id] from sum
-
 //
 //
 int kca_solve(kca_state *ks, int num_candidates, int max_gens){

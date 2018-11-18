@@ -36,7 +36,6 @@ typedef struct{
     mword curr_var;
     mword *solver_stack;
     mword *assignment_stack;
-    mword *branch_history;
 
     clause_list *cl;
 
@@ -78,11 +77,17 @@ typedef struct{
     mword *lit_neg_clause_map; // maps each negative literal-occurrence in cl->variables to its clause
 
     // num_attempts = num_attempts_0 + num_attempts_1
-    mword *num_attempts_0;
-    mword *num_attempts_1;
+//    mword *num_attempts_0;
+//    mword *num_attempts_1;
+//
+//    mword *reward_0;
+//    mword *reward_1;
 
-    mword *reward_0;
-    mword *reward_1;
+    mword *num_attempts;
+    mword *reward;
+    mword *branch_history;
+    mword *reward_stack;
+    mword *attempts_stack;
 
     mword dev_ctr;
     mword dev_break;

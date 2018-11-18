@@ -30,6 +30,13 @@ int cmp_abs_int(const void *a, const void *b){
 
 //
 //
+int cmp_kca_score_double(const void *a, const void *b){
+    return ( ***(double***)b > ***(double***)a ) ? 1 : -1; // sort greatest-to-least
+}
+
+
+//
+//
 void st_init(babel_env *be, st_state *st){
 
     // clause_list               --> [init_clause_array]          --> raw_clause_array
@@ -54,27 +61,26 @@ void st_init(babel_env *be, st_state *st){
 
     st_init_var_array(be, st);
     st_init_solver_stack(be, st);
-
-//    st_init_ucb_arrays(be, st);
-//    st_init_weights(be, st);
+    st_init_ucb_arrays(be, st);
 
     st_init_raw_clause_array(be, st);
 
-st->clause_array   = st->raw_clause_array;
+        st->clause_array   = st->raw_clause_array;
 
     st_init_raw_var_clause_map(be, st);
 
-st->var_clause_map = st->raw_var_clause_map;
+        st->var_clause_map = st->raw_var_clause_map;
 
+    st_init_weights(be, st);
     st_init_reorder_clause_array(be, st);
 
-st->clause_array   = st->reorder_clause_array;
-st->var_clause_map = st->reorder_var_clause_map;
+        st->clause_array   = st->reorder_clause_array;
+        st->var_clause_map = st->reorder_var_clause_map;
 
     st_init_permute_variables(be, st);
 
-st->clause_array   = st->permute_clause_array;
-st->var_clause_map = st->permute_var_clause_map;
+        st->clause_array   = st->permute_clause_array;
+        st->var_clause_map = st->permute_var_clause_map;
 
     st_init_var_prop_clause_map(be, st);
     st_init_var_prop_var_map(be, st);
@@ -100,8 +106,6 @@ void st_init_var_array(babel_env *be, st_state *st){
 void st_init_solver_stack(babel_env *be, st_state *st){
 
     st->solver_stack     = mem_new_str(be, st->cl->num_variables+1, '\0');
-    st->assignment_stack = mem_new_str(be, st->cl->num_variables+1, '\0');
-    st->branch_history   = mem_new_str(be, st->cl->num_variables+1, '\0');
 
 }
 
@@ -110,10 +114,18 @@ void st_init_solver_stack(babel_env *be, st_state *st){
 //
 void st_init_ucb_arrays(babel_env *be, st_state *st){
 
-    st->num_attempts_0 = mem_new_str(be, st->cl->num_variables+1, '\0');
-    st->num_attempts_1 = mem_new_str(be, st->cl->num_variables+1, '\0');
-    st->reward_0       = mem_new_str(be, st->cl->num_variables+1, '\0');
-    st->reward_1       = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->assignment_stack = mem_new_str(be, st->cl->num_variables+1, '\0');
+    st->branch_history   = mem_new_str(be, st->cl->num_variables+1, '\0');
+
+//    st->num_attempts_0   = mem_new_str(be, st->cl->num_variables+1, '\0');
+//    st->num_attempts_1   = mem_new_str(be, st->cl->num_variables+1, '\0');
+//    st->reward_0         = mem_new_str(be, st->cl->num_variables+1, '\0');
+//    st->reward_1         = mem_new_str(be, st->cl->num_variables+1, '\0');
+
+    st->num_attempts   = mem_new_val(be, 256*(st->cl->num_variables+1), 0);
+    st->reward         = mem_new_val(be, 256*(st->cl->num_variables+1), 0);
+    st->reward_stack   = mem_new_val(be, st->cl->num_variables+1, 0);
+    st->attempts_stack = mem_new_val(be, st->cl->num_variables+1, 0);
 
 }
 
@@ -260,73 +272,6 @@ void st_init_raw_var_clause_map(babel_env *be, st_state *st){
 }
 
 
-#if 0
-//
-//
-void st_init_var_clause_map(babel_env *be, st_state *st){
-
-    int i,j,k;
-    clause_list *cl = st->cl;
-
-    mword *raw_clause_array = st->raw_clause_array;
-
-    mword *clause_trie = trie_new(be);
-    mword clause_array_size = size(raw_clause_array);
-    mword curr_clause_size;
-
-    mword *trie_entry;
-    mword *hash_key = mem_new_val(be,HASH_SIZE,0);
-    mword *new_list;
-    mword *curr_index = mem_new_val(be, 2, 0);
-    mword *curr_clause;
-
-    mword *clauses;
-    mword  num_clauses;
-
-    for(i=0;i<clause_array_size;i++){
-
-        curr_clause = rdp(raw_clause_array,i);
-        curr_clause_size = size(curr_clause);
-
-        for(j=0;j<curr_clause_size;j++){
-
-            ldv(curr_index,0) = abs(rdv(curr_clause,j));
-            pearson128(hash_key, be->zero_hash, (char*)curr_index, MWORD_SIZE);
-
-            trie_entry = trie_lookup_hash(be, clause_trie, hash_key, be->nil);
-
-            if(!is_nil(trie_entry))
-                trie_entry = trie_entry_get_payload(be, trie_entry);
-
-            new_list = list_cons(be, _val(be, i), be->nil);
-            list_push(be, trie_entry, new_list);
-            trie_insert(be, clause_trie, hash_key, be->nil, new_list);
-
-        }
-
-    }
-
-    mword *raw_var_clause_map = mem_new_ptr(be, cl->num_variables+1);
-
-    for(i=1; i <= cl->num_variables; i++){
-
-        ldv(curr_index,0) = i;
-        pearson128(hash_key, be->zero_hash, (char*)curr_index, MWORD_SIZE);
-        trie_entry = trie_lookup_hash(be, clause_trie, hash_key, be->nil);
-
-        if(!is_nil(trie_entry))
-            trie_entry = trie_entry_get_payload(be, trie_entry);
-
-        ldp(raw_var_clause_map,i) = list_to_val_array(be, trie_entry);
-
-    }
-
-    st->raw_var_clause_map = raw_var_clause_map;
-
-}
-#endif
-
-
 //
 //
 void st_init_weights(babel_env *be, st_state *st){
@@ -344,12 +289,11 @@ void st_init_weights(babel_env *be, st_state *st){
         num_lit_occ = size(rdp(st->raw_var_clause_map,i));
         var_weight = (double)num_lit_occ / st->cl->num_assignments;
         *((double*)var_lit_weights+i) = var_weight;
-//        _dd(i);
-//        _df(var_weight);
     }
 
-    mword *clause_weights = mem_new_val(be, st->cl->num_clauses, 0);
+    mword *clause_weights = mem_new_ptr(be, st->cl->num_clauses);
     mword *clause;
+    mword *curr_clause_weight;
     mword  clause_size;
 
     for(i=0; i<st->cl->num_clauses; i++){
@@ -364,14 +308,22 @@ void st_init_weights(babel_env *be, st_state *st){
             var_weight = *((double*)var_lit_weights+var_id);
             sum_var_weight += var_weight;
         }
-//        _df(sum_var_weight);
-//        printf("%lf\n", sum_var_weight);
-//        clause_weight = (double)expf(-1 * clause_size) ;
+
         clause_weight = (double)expf((-1.0f * clause_size)) * sum_var_weight;
 //        _df(clause_weight);
-        *((double*)clause_weights+i) = clause_weight;
+
+        curr_clause_weight = list_cons(be, _val(be, 0), _val(be, i));
+        
+        *((double*)rdp(curr_clause_weight,0)) = clause_weight;
+
+        ldp(clause_weights,i) = curr_clause_weight;
 
     }
+
+    qsort(clause_weights, size(clause_weights), sizeof(mword), cmp_kca_score_double);
+
+    st->var_lit_weights = var_lit_weights;
+    st->clause_weights  = clause_weights;
 
 }
 
@@ -380,20 +332,13 @@ void st_init_weights(babel_env *be, st_state *st){
 //
 void st_init_reorder_clause_array(babel_env *be, st_state *st){
 
-    // FIXME:
-    //      sort by score, not clause-length
-    //      score is calculated as:
-    //          (2^-clause_length) * (SUM [var_weights in this clause])
-    mword *sort_clause_array = bstruct_cp(be, st->raw_clause_array);
-//    qsort(sort_clause_array, size(sort_clause_array), sizeof(mword), cmp_size);
-
     int i,j;
 
-    mword *bfs_clause_array     = mem_new_ptr(be, size(sort_clause_array));
-    mword *reorder_clause_array = mem_new_ptr(be, size(sort_clause_array));
+    mword *bfs_clause_array     = mem_new_ptr(be, size(st->clause_array));
+    mword *reorder_clause_array = mem_new_ptr(be, size(st->clause_array));
 
     for(i=0; i<st->cl->num_clauses; i++){
-        ldp(bfs_clause_array, i) = rdp(sort_clause_array, i);
+        ldp(bfs_clause_array, i) = rdp(st->clause_array, vcar(pcdr(rdp(st->clause_weights,i))) );
     }
 
     mword *clause_queue = st_queue_new(be);
@@ -403,7 +348,6 @@ void st_init_reorder_clause_array(babel_env *be, st_state *st){
     //      to ensure that the BFS has a certain degree of "spread" throughout 
     //      the graph.
     st_enqueue(be, clause_queue, _val(be, 0));
-
     ldp(bfs_clause_array, 0) = be->nil;
 
     mword *curr_clause;
