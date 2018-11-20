@@ -23,6 +23,7 @@ int ts_ucb_solve(babel_env *be, st_state *st){
 
     int max_var=1;
     int local_max_var=1;
+    int last_local_max_var=1;
 
     mword reward;
     mword attempts;
@@ -34,9 +35,11 @@ int ts_ucb_solve(babel_env *be, st_state *st){
 
     solver_cont sc;
 
+    float fuzz = 0.1f;
+
 restart:
 
-    for(i=1; i<=curr_var; i++){
+    for(i=1; i<=st->cl->num_variables; i++){
         solver_stack[i] = 0;
         branch_history[i] = 0;
         assignment_stack[i] = UNASSIGNED_VS;
@@ -73,14 +76,20 @@ if((st->dev_ctr % 100000) == 0){
         local_max_var=1;
     }
 
-    for(i=curr_var; i>0; i--) // unwind the stats stacks
-        ts_ucb_update_stats(st, 
-            i, 
-            (branch_history[i]<<1)|(solver_stack[i]==DEC_ASSIGN0_VS), 
-            reward_stack[curr_var], 
-            attempts_stack[i]);
+    if((st->dev_ctr % 100000) == 0){
+        attempts=0;
+        for(i=curr_var; i>0; i--){ // unwind the stats stacks
+            attempts += attempts_stack[i];
+            reward = MAX(reward,reward_stack[i]);
+            ts_ucb_update_stats(st, 
+                i, 
+                branch_history[i], 
+                reward,
+                attempts);
+        }
 
-    goto restart;
+        goto restart;
+    }
 
 }
 
@@ -111,8 +120,8 @@ if((st->dev_ctr % 100000) == 0){
             continue;
         }
 
-
-        curr_assignment = ts_ucb_assign(st, curr_var, table_branch_select);
+//        curr_assignment = ts_rand_assign();
+        curr_assignment = ts_ucb_assign(st, curr_var, table_branch_select, fuzz);
 
         if(curr_assignment == DEC_ASSIGN0_VS){
             assignment_stack[curr_var] = DEC_ASSIGN1_VS;
@@ -143,9 +152,9 @@ cont_A:
             curr_var--;
             continue;
         }
-        else{
-            ts_ucb_update_stats(st, curr_var, table_branch_select, reward, attempts);
-        }
+//        else{
+//            ts_ucb_update_stats(st, curr_var, table_branch_select, reward, attempts);
+//        }
 
         cnf_var_unassign(st, curr_var);
         if(cnf_var_assign(st, curr_var, assignment_stack[curr_var])){
@@ -217,34 +226,35 @@ var_state ts_rand_assign(void){
 
 //
 //
-var_state ts_ucb_assign(st_state *st, int curr_var, int table_branch_select){
+var_state ts_ucb_assign(st_state *st, int curr_var, int table_branch_select, float fuzz){
 
-    return ts_rand_assign();
+    if(rand_bent_coin(fuzz))
+        return ts_rand_assign();
 
-//    unsigned char select = (unsigned char)table_branch_select;
-//    select <<= 1;
-//
-//    int reward_0;
-//    int reward_1;
-//
-//    int attempts_0 = ldv(st->num_attempts,(256*curr_var)+(select));
-//    int attempts_1 = ldv(st->num_attempts,(256*curr_var)+(select|1));
-//
-//    if((attempts_1 == 0) && (attempts_0 == 0))
-//        return ts_rand_assign();
-//    else if(attempts_1 == 0)
-//        return DEC_ASSIGN1_VS;
-//    else if(attempts_0 == 0)
-//        return DEC_ASSIGN0_VS;
-//    else{
-//        reward_0 = ldv(st->reward,(256*curr_var)+(select));
-//        reward_1 = ldv(st->reward,(256*curr_var)+(select|1));
-//        // XXX REVERSED? XXX //
-//        if(ts_ucb_choice(reward_0, reward_1, attempts_0, attempts_1))
-//            return DEC_ASSIGN0_VS;
-//        else
-//            return DEC_ASSIGN1_VS;
-//    }
+    unsigned char select = (unsigned char)table_branch_select;
+    select <<= 1;
+
+    int reward_0;
+    int reward_1;
+
+    int attempts_0 = ldv(st->num_attempts,(256*curr_var)+(select & ~0x1));
+    int attempts_1 = ldv(st->num_attempts,(256*curr_var)+(select |  0x1));
+
+    if((attempts_1 == 0) && (attempts_0 == 0))
+        return ts_rand_assign();
+    else if(attempts_1 == 0)
+        return DEC_ASSIGN1_VS;
+    else if(attempts_0 == 0)
+        return DEC_ASSIGN0_VS;
+    else{
+        reward_0 = ldv(st->reward,(256*curr_var)+(select & ~0x1));
+        reward_1 = ldv(st->reward,(256*curr_var)+(select |  0x1));
+        // XXX REVERSED? XXX //
+        if(ts_ucb_choice(reward_0, reward_1, attempts_0, attempts_1))
+            return DEC_ASSIGN1_VS;
+        else
+            return DEC_ASSIGN0_VS;
+    }
 
 }
 
@@ -256,16 +266,16 @@ int ts_ucb_choice(float reward_0, float reward_1, float num_attempts_0, float nu
     float num_attempts = num_attempts_0 + num_attempts_1;
 
 //    float choice = 
-//            (log2f(reward_0) + sqrt((2 * log(num_attempts)) / num_attempts_0))
+//            (reward_0 + sqrt((2 * log(num_attempts)) / num_attempts_0))
 //            -
-//            (log2f(reward_1) + sqrt((2 * log(num_attempts)) / num_attempts_1));
+//            (reward_1 + sqrt((2 * log(num_attempts)) / num_attempts_1));
 
     float choice = 
-            (reward_0 + sqrt((2 * log(num_attempts)) / num_attempts_0))
+            (reward_1 + sqrt((2 * log(num_attempts)) / num_attempts_1))
             -
-            (reward_1 + sqrt((2 * log(num_attempts)) / num_attempts_1));
+            (reward_0 + sqrt((2 * log(num_attempts)) / num_attempts_0));
 
-    return (choice < 0.0f);
+    return (choice > 0.0f);
 
 }
 
