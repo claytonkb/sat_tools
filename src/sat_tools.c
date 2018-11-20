@@ -347,8 +347,10 @@ void st_init_reorder_clause_array(babel_env *be, st_state *st){
     // XXX NOTE: Think about inserting top K clause_id's into the clause queue 
     //      to ensure that the BFS has a certain degree of "spread" throughout 
     //      the graph.
-    st_enqueue(be, clause_queue, _val(be, 0));
-    ldp(bfs_clause_array, 0) = be->nil;
+    for(i=0; i < st->cl->num_clauses / 10; i++){
+        st_enqueue(be, clause_queue, _val(be, i));
+        ldp(bfs_clause_array, i) = be->nil;
+    }
 
     mword *curr_clause;
     mword  curr_clause_id;
