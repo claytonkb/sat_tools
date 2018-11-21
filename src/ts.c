@@ -24,6 +24,7 @@ int ts_ucb_solve(babel_env *be, st_state *st){
     int max_var=1;
     int local_max_var=1;
     int last_local_max_var=1;
+    int dev_i;
 
     mword reward;
     mword attempts;
@@ -71,25 +72,25 @@ if((st->dev_ctr % 100000) == 0){
         _dd(st->dev_ctr);
     }
 
+//    if((st->dev_ctr % 100000) == 0){
+
+//    _mem(st->attempts_stack);
+
+    for(i=local_max_var; i>0; i--){ // unwind the stats stacks
+        ts_ucb_update_stats(st, 
+            i, 
+            branch_history[i], 
+            rdv(st->reward_stack,i),
+            rdv(st->attempts_stack,i));
+    }
+
     if((st->dev_ctr % 1000000) == 0){
         fprintf(stderr, "%d:%d", max_var, local_max_var);
         local_max_var=1;
     }
 
-    if((st->dev_ctr % 100000) == 0){
-        attempts=0;
-        for(i=curr_var; i>0; i--){ // unwind the stats stacks
-            attempts += attempts_stack[i];
-            reward = MAX(reward,reward_stack[i]);
-            ts_ucb_update_stats(st, 
-                i, 
-                branch_history[i], 
-                reward,
-                attempts);
-        }
-
-        goto restart;
-    }
+    goto restart;
+//    }
 
 }
 
@@ -99,7 +100,7 @@ if((st->dev_ctr % 100000) == 0){
         if(returning){
             returning = 0;
             sc = solver_stack[curr_var];
-            table_branch_select = branch_history[curr_var];
+//            table_branch_select = branch_history[curr_var];
             switch(sc){
                 case CONT_A_SC:
                     goto cont_A;
@@ -108,8 +109,8 @@ if((st->dev_ctr % 100000) == 0){
             }
         }
 
-        reward = curr_var;
-        attempts = 1;
+//        reward = curr_var;
+//        attempts = 1;
 
         if(curr_var > st->cl->num_variables){
             if(cnf_clause_all_sat(st)){
@@ -120,8 +121,8 @@ if((st->dev_ctr % 100000) == 0){
             continue;
         }
 
-//        curr_assignment = ts_rand_assign();
-        curr_assignment = ts_ucb_assign(st, curr_var, table_branch_select, fuzz);
+        curr_assignment = ts_rand_assign();
+//        curr_assignment = ts_ucb_assign(st, curr_var, table_branch_select, fuzz);
 
         if(curr_assignment == DEC_ASSIGN0_VS){
             assignment_stack[curr_var] = DEC_ASSIGN1_VS;
@@ -133,10 +134,14 @@ if((st->dev_ctr % 100000) == 0){
         if(cnf_var_assign(st, curr_var, curr_assignment)){
             if(!cnf_var_unsat(st, curr_var)){
                 solver_stack[curr_var] = CONT_A_SC;
-                branch_history[curr_var] = table_branch_select;
-                table_branch_select <<= 1;
-                if(curr_assignment == DEC_ASSIGN1_VS)
-                    table_branch_select |= 1;
+//                table_branch_select <<= 1;
+//                if(curr_assignment == DEC_ASSIGN1_VS){
+//                    branch_history[curr_var] = table_branch_select;
+//                    table_branch_select |= 1;
+//                }
+//                else{
+//                    branch_history[curr_var] = table_branch_select | 1;
+//                }
                 curr_var++;
                 continue;
             }
@@ -144,8 +149,8 @@ if((st->dev_ctr % 100000) == 0){
 
 cont_A:
 
-        reward_stack[curr_var]   = reward;
-        attempts_stack[curr_var] = attempts+1;
+//        reward_stack[curr_var]   = reward;
+//        attempts_stack[curr_var] = attempts+1;
 
         if(result == 1){
             returning = 1;
@@ -166,9 +171,9 @@ cont_A:
             else{
                 solver_stack[curr_var] = CONT_B_SC; 
                 branch_history[curr_var] = table_branch_select;
-                table_branch_select <<= 1;
-                if(assignment_stack[curr_var] == DEC_ASSIGN1_VS)
-                    table_branch_select |= 1;
+//                table_branch_select <<= 1;
+//                if(assignment_stack[curr_var] == DEC_ASSIGN1_VS)
+//                    table_branch_select |= 1;
                 curr_var++;
                 continue;
             }
@@ -177,14 +182,14 @@ cont_A:
 
 cont_B:
 
-        reward = MAX(reward, reward_stack[curr_var]);
-        attempts = attempts + attempts_stack[curr_var];
+//        reward = MAX(reward, reward_stack[curr_var]);
+//        attempts = attempts + attempts_stack[curr_var];
 
         if(result == 0){
             if(curr_var == 1) // UNSAT
                 goto restart;
             cnf_var_unassign(st, curr_var);
-            ts_ucb_update_stats(st, curr_var, table_branch_select, reward, attempts);
+//            ts_ucb_update_stats(st, curr_var, table_branch_select, reward, attempts);
         }
 
         returning = 1;
@@ -291,8 +296,154 @@ void ts_ucb_update_stats(st_state *st, int curr_var, int table_branch_select, in
     int curr_reward   = rdv(st->reward,(256*curr_var)+branch_select);
     int curr_attempts = rdv(st->num_attempts,(256*curr_var)+branch_select);
 
-    ldv(st->reward,(256*curr_var)+branch_select)       = MAX(curr_reward,reward);
+//    ldv(st->reward,(256*curr_var)+branch_select)       = MAX(curr_reward,reward);
+//    ldv(st->num_attempts,(256*curr_var)+branch_select) = curr_attempts + attempts;
+//if(curr_var==2){
+//    _dd(reward);
+//    _dd(attempts);
+//}
+    ldv(st->reward,(256*curr_var)+branch_select)       = curr_reward + reward;
     ldv(st->num_attempts,(256*curr_var)+branch_select) = curr_attempts + attempts;
+
+}
+
+
+// Iterative modified DPLL + restarts
+//
+int ts_restart_solve(babel_env *be, st_state *st){
+
+    unsigned char *solver_stack     = (unsigned char*)st->solver_stack;
+    unsigned char *branch_history   = (unsigned char*)st->branch_history;
+    unsigned char *assignment_stack = (unsigned char*)st->assignment_stack;
+
+    unsigned char table_branch_select;
+
+    var_state curr_assignment;
+
+    int curr_var = 1;
+    int result = 0;
+    int returning = 0;
+    int restarting = 0;
+
+    solver_cont sc;
+
+    while(1){
+
+        if(restarting){
+            solver_stack[curr_var] = 0;
+            branch_history[curr_var] = 0;
+            assignment_stack[curr_var] = UNASSIGNED_VS;
+            cnf_var_write(st, curr_var, UNASSIGNED_VS);
+            ts_ucb_update_stats(st, 
+                curr_var, 
+                branch_history[curr_var], 
+                rdv(st->reward_stack,curr_var),
+                rdv(st->attempts_stack,curr_var));
+            if(curr_var > 1)
+                curr_var--;
+            else
+                restarting=0;
+            continue;
+        }
+
+st->dev_ctr++;
+
+if((st->dev_ctr % 100000) == 0){
+    _prn(".");
+
+//    if((st->dev_ctr % 1000000) == 0){
+        restarting = 1;
+//    }
+
+    if((st->dev_ctr % 100000000) == 0){
+        return 0;
+        _say("");
+        _dd(st->dev_ctr);
+    }
+}
+
+        if(curr_var == 1 && result == 1) // SAT
+            break;
+
+        if(returning){
+            returning = 0;
+            sc = solver_stack[curr_var];
+            switch(sc){
+                case CONT_A_SC:
+                    goto cont_A;
+                case CONT_B_SC:
+                    goto cont_B;
+             }
+        }
+
+        if(curr_var > st->cl->num_variables){
+            if(cnf_clause_all_sat(st)){
+                result = 1;
+                returning = 1;
+            }
+            curr_var--;
+            continue;
+        }
+
+        curr_assignment = ts_rand_assign();
+
+        if(curr_assignment == DEC_ASSIGN0_VS){
+            assignment_stack[curr_var] = DEC_ASSIGN1_VS;
+        }
+        else{
+            assignment_stack[curr_var] = DEC_ASSIGN0_VS;
+        }
+
+        if(cnf_var_assign(st, curr_var, curr_assignment)){
+            if(!cnf_var_unsat(st, curr_var)){
+                solver_stack[curr_var] = CONT_A_SC;
+                curr_var++;
+                continue;
+            }
+        }
+
+cont_A:
+
+        if(result == 1){
+            returning = 1;
+            curr_var--;
+            continue;
+        }
+        // else 
+
+        cnf_var_unassign(st, curr_var);
+        if(cnf_var_assign(st, curr_var, assignment_stack[curr_var])){
+
+            if(cnf_var_unsat(st, curr_var)){
+                result = 0;
+                goto cont_B;
+            }
+            else{
+                solver_stack[curr_var] = CONT_B_SC; 
+                curr_var++;
+                continue;
+            }
+
+        }
+
+cont_B:
+
+        if(result == 0){
+            if(curr_var == 1){
+                restarting=1;
+                continue;
+            }
+            cnf_var_unassign(st, curr_var);
+        }
+
+        returning = 1;
+        curr_var--;
+        continue;
+
+
+    }
+
+    return result;
 
 }
 
@@ -393,6 +544,7 @@ cont_B:
     return result;
 
 }
+
 
 // Clayton Bauman 2018
 
