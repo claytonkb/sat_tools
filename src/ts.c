@@ -85,8 +85,8 @@ if((st->dev_ctr % major_restart_period) == 0){
                     major_restarting = 0;
                     fprintf(stderr,"MR ");
                     for(i=0;i<size(st->num_attempts);i++){
-                        st->num_attempts[i]=(st->num_attempts[i]>0);
-                        st->reward[i]=st->reward[i]>>1;
+                        st->num_attempts[i]=0;//(st->num_attempts[i]>0);
+                        st->reward[i]=0;//(st->reward[i]>0);
                     }
                 }
 
