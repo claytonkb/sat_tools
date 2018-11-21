@@ -33,6 +33,8 @@ int ts_ucb_solve(babel_env *be, st_state *st){
     int returning = 0;
     int restarting = 0;
     int restart_period = 100000;
+    int major_restarting = 0;
+    int major_restart_period = 10000000;
     int branch_select = 0;
 
     while(max_tries--){
@@ -50,6 +52,10 @@ if((st->dev_ctr % 100000) == 0){
     fprintf(stderr," ");
 }
 if((st->dev_ctr % restart_period) == 0) restarting=1;
+if((st->dev_ctr % major_restart_period) == 0){
+    restarting=1;
+    major_restarting=1;
+}
 
         if(restarting){
 
@@ -74,6 +80,15 @@ if((st->dev_ctr % restart_period) == 0) restarting=1;
 
                 for(i=0;i<st->cl->num_variables;i++)
                     cnf_var_write(st, i, UNASSIGNED_VS);
+
+                if(major_restarting){
+                    major_restarting = 0;
+                    fprintf(stderr,"MR ");
+                    for(i=0;i<size(st->num_attempts);i++){
+                        st->num_attempts[i]=(st->num_attempts[i]>0);
+                        st->reward[i]=st->reward[i]>>1;
+                    }
+                }
 
                 reward = 1;
                 attempts = 1;
@@ -116,7 +131,7 @@ if((st->dev_ctr % restart_period) == 0) restarting=1;
 
         // XXX SECTION BLUE XXX //
         //curr_assignment = ts_rand_assign();
-        curr_assignment = ts_ucb_assign(st, curr_var, branch_select, 0.1);
+        curr_assignment = ts_ucb_assign(st, curr_var, (branch_select<<1), 0.1);
 
         if(curr_assignment == DEC_ASSIGN0_VS){
             assignment_stack[curr_var] = DEC_ASSIGN1_VS;
@@ -178,7 +193,7 @@ cont_B:
         if(curr_var == 1) // went the wrong way :(
             restarting=1;
 
-//        branch_select = branch_stack[curr_var]; // redundant?
+        branch_select = branch_stack[curr_var]; // redundant?
         reward   = MAX(reward, reward_stack[curr_var]);
         attempts = attempts + attempts_stack[curr_var];
 
@@ -212,6 +227,7 @@ var_state ts_rand_assign(void){
 
 }
 
+
 //
 //
 var_state ts_ucb_assign(st_state *st, int curr_var, int table_branch_select, float fuzz){
@@ -219,24 +235,37 @@ var_state ts_ucb_assign(st_state *st, int curr_var, int table_branch_select, flo
     if(rand_bent_coin(fuzz))
         return ts_rand_assign();
 
-    unsigned char select = (unsigned char)table_branch_select;
-    select <<= 1;
+    unsigned char select_0 = ((unsigned char)table_branch_select) & ~0x1;
+    unsigned char select_1 = ((unsigned char)table_branch_select) |  0x1;
 
     int reward_0;
     int reward_1;
 
-    int attempts_0 = ldv(st->num_attempts,(256*curr_var)+(select & ~0x1));
-    int attempts_1 = ldv(st->num_attempts,(256*curr_var)+(select |  0x1));
+    int attempts_0 = ldv(st->num_attempts,(256*curr_var)+select_0);
+    int attempts_1 = ldv(st->num_attempts,(256*curr_var)+select_1);
 
-    if((attempts_1 == 0) && (attempts_0 == 0))
+    if((attempts_1 == 0) && (attempts_0 == 0)){
         return ts_rand_assign();
-    else if(attempts_1 == 0)
+//        if(ts_rand_assign()==DEC_ASSIGN1_VS){
+//            rdv(st->num_attempts,(256*curr_var)+select_1)=1;
+//            return DEC_ASSIGN1_VS;
+//        }
+//        else{
+//            rdv(st->num_attempts,(256*curr_var)+select_0)=1;
+//            return DEC_ASSIGN0_VS;
+//        }
+    }
+    else if(attempts_1 == 0){
+//        rdv(st->num_attempts,(256*curr_var)+select_1)=1;
         return DEC_ASSIGN1_VS;
-    else if(attempts_0 == 0)
+    }
+    else if(attempts_0 == 0){
+//        rdv(st->num_attempts,(256*curr_var)+select_0)=1;
         return DEC_ASSIGN0_VS;
+    }
     else{
-        reward_0 = ldv(st->reward,(256*curr_var)+(select & ~0x1));
-        reward_1 = ldv(st->reward,(256*curr_var)+(select |  0x1));
+        reward_0 = ldv(st->reward,(256*curr_var)+select_0);
+        reward_1 = ldv(st->reward,(256*curr_var)+select_1);
         // XXX REVERSED? XXX //
         if(ts_ucb_choice(reward_0, reward_1, attempts_0, attempts_1))
             return DEC_ASSIGN1_VS;
@@ -276,6 +305,8 @@ void ts_ucb_update_stats(st_state *st, int curr_var, int table_branch_select, in
 
     // max-reward
     // attempts sum
+    int i;
+
     unsigned char branch_select = (unsigned char)table_branch_select;
 
     int curr_reward   = rdv(st->reward,(256*curr_var)+branch_select);
@@ -283,9 +314,6 @@ void ts_ucb_update_stats(st_state *st, int curr_var, int table_branch_select, in
 
     ldv(st->reward,(256*curr_var)+branch_select)       = MAX(curr_reward,reward);
     ldv(st->num_attempts,(256*curr_var)+branch_select) = curr_attempts + attempts;
-
-//    ldv(st->reward,(256*curr_var)+branch_select)       = curr_reward + reward;
-//    ldv(st->num_attempts,(256*curr_var)+branch_select) = curr_attempts + attempts;
 
 }
 
