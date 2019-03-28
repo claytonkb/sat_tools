@@ -28,10 +28,12 @@ my $project_dir = cwd();
 my $parent_dir  = $project_dir;
    $parent_dir  =~ s/\/[^\/]+$//;
 
-my $claytonkb_deps = [ qw{lib_babel} ];
+my $claytonkb_deps = [ qw{lib_babel cnf_parse} ];
 
 our ($opt_o, $opt_v, $opt_V, $opt_s, $opt_t);
 getopts('ovVst');
+
+my $arg = shift;
 
 my $verbose              = ($opt_v or $opt_V);
 my $recursive_verbose    = "";
@@ -44,19 +46,30 @@ my $default_optimize     = "";
 my $default_warnings     = "-Wall -Wfatal-errors";
 my $default_libraries    = "-lm -lncurses -lpthread -lrt -l$project";
 
-makepl_cd($parent_dir);
+if(($#{$claytonkb_deps} > -1) and ($arg ne "clean")){
 
-my $parent_sibling_dirs = (makepl_do("ls"))->[0];
-my @parent_sibling_dirs = split /\n/, $parent_sibling_dirs;
-
-for my $dep (@{$claytonkb_deps}){
-    if( ! grep(/^$dep$/, @parent_sibling_dirs) ){
-        makepl_say("Missing claytonkb dependency: $dep");
-        die;
+    for(@{$claytonkb_deps}){
+        makepl_say("dependency: $_") if($verbose);
     }
-}
 
-makepl_cd($project_dir);
+    makepl_cd($parent_dir);
+
+    my $parent_sibling_dirs = makepl_do("ls");
+    my @parent_sibling_dirs = split(/\n/, $parent_sibling_dirs->[0]) if(defined $parent_sibling_dirs);
+
+    for my $dep (@{$claytonkb_deps}){
+        if( ! grep(/^$dep$/, @parent_sibling_dirs) ){
+            makepl_say("Missing claytonkb dependency: $dep");
+            die;
+        }
+    }
+
+    makepl_cd($project_dir);
+
+}
+else{
+    makepl_say("No dependencies") if($verbose);
+}
 
 my @default_lib_dirs     = ("${project_dir}/lib");
 my @default_include_dirs = ("${project_dir}/src");
@@ -72,8 +85,6 @@ $default_include_dirs   .= "-I$_ " for(@default_include_dirs);
 
 my $launch_timestamp     = time();
 my $success=0;
-
-my $arg = shift;
 
 if($arg    eq "clean"){
     clean();
