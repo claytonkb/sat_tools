@@ -1,31 +1,32 @@
-digraph babel {
+graph babel {
+
     node [shape=record];
     graph [rankdir = "LR"];
 
-    c0 [shape=oval,color=green]
-    c1 [shape=oval,color=green]
-    foo [shape=record,color=blue,label="<f0> x14|<f1> ~x14"]
-    foo:f0 -> c1
-    foo:f1 -> c0
+    c0 [style=bold,shape=oval,color=cyan]
+    c1 [style=bold,shape=oval,color=cyan]
+    foo [style=bold,shape=record,color=magenta,label="<f0> x14|<f1> ~x14"]
+    foo:f0 -- c1
+    foo:f1 -- c0
 
-    "s3631fe98" [shape=record,label="<f0> 0|<f1> 1|<f2> 2|<f3> 3|<f4> 4|<f5> 5|<f6> 6|<f7> 7|<f8> 8|<f9> 9",style="dashed"];
-    "s3631fe98":f2 -> "s363241a8":f0;
-
-//    foo [style=bold,shape=box,color=blue];
-//    "s3631fe98":f2 -> foo;
+//    "s3631fe98" [shape=record,label="<f0> 0|<f1> 1|<f2> 2|<f3> 3|<f4> 4|<f5> 5|<f6> 6|<f7> 7|<f8> 8|<f9> 9",style="dashed"];
+//    "s3631fe98":f2 -> "s363241a8":f0;
 //
-//    bar [style=bold,shape=oval,color=red];
-//    "s3631fe98":f2 -> bar;
-
-    s363241a8 [style=bold,shape=record,label="<f0> 0"];
-    "s3631fe98":f3 -> "s363241c8":f0;
-
-    s363241c8 [style=bold,shape=record,label="<f0> 4"];
-    "s3631fe98":f5 -> "s363241e8":f0;
-    s363241e8 [style=bold,shape=record,label="<f0> 3d|<f1> 1"];
-    "s3631fe98":f7 -> "s36324208":f0;
-    s36324208 [style=bold,shape=record,label="<f0> 3a"];
-    "s3631fe98":f8 -> "s36324228":f0;
-    s36324228 [style=bold,shape=record,label="<f0> 40|<f1> 2"];
+////    foo [style=bold,shape=box,color=blue];
+////    "s3631fe98":f2 -> foo;
+////
+////    bar [style=bold,shape=oval,color=red];
+////    "s3631fe98":f2 -> bar;
+//
+//    s363241a8 [style=bold,shape=record,label="<f0> 0"];
+//    "s3631fe98":f3 -> "s363241c8":f0;
+//
+//    s363241c8 [style=bold,shape=record,label="<f0> 4"];
+//    "s3631fe98":f5 -> "s363241e8":f0;
+//    s363241e8 [style=bold,shape=record,label="<f0> 3d|<f1> 1"];
+//    "s3631fe98":f7 -> "s36324208":f0;
+//    s36324208 [style=bold,shape=record,label="<f0> 3a"];
+//    "s3631fe98":f8 -> "s36324228":f0;
+//    s36324228 [style=bold,shape=record,label="<f0> 40|<f1> 2"];
 }
 
