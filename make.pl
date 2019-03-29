@@ -84,9 +84,11 @@ $default_lib_dirs       .= "-L$_ " for(@default_lib_dirs);
 $default_include_dirs   .= "-I$_ " for(@default_include_dirs);
 
 my $launch_timestamp     = time();
-my $success=0;
+my $touch_last_built=1;
+   $touch_last_built=0 if $opt_t;
 
 if($arg    eq "clean"){
+    $touch_last_built=0;
     clean();
 }
 elsif($arg eq "deps"){
@@ -102,7 +104,7 @@ else{
     make_all();
 }
 
-makepl_do("touch .last_built"); # XXX if($success) XXX
+makepl_do("touch .last_built") if($touch_last_built);
 
 makepl_say("Done") if $verbose;
 
@@ -225,7 +227,7 @@ sub clean{
     makepl_do("rm -rf lib");
     makepl_do("rm -rf bin");
     makepl_do("rm -rf obj");
-    makepl_do("rm .last_built");
+    makepl_do("rm -f .last_built");
 
 }
 
