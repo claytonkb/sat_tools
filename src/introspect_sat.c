@@ -1,6 +1,6 @@
 // introspect.c
 
-#include "introspect.h"
+#include "introspect_sat.h"
 
 //typedef struct {
 //    uint64_t *variables;
