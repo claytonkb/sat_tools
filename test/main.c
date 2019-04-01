@@ -39,6 +39,14 @@ void dev_prompt(void){
     char *cnf_file;
     clause_list *cl;
 
+    babel_env *be = babel_env_new(1);
+
+    mword *ACC=be->nil;
+    mword *temp;
+    mword *clause;
+    mword  tempv;
+    int    tempi=0;
+
     _say("type 0 for menu");
 
     while(1){
@@ -57,6 +65,11 @@ void dev_prompt(void){
                 break;
 
             case 1:
+                temp = mem_new_str(be, 1000, 0);
+                bsprintf(be, temp, &tempi, "digraph babel {\nnode [shape=record];\n");
+                introspect_sat_gv(be,cl);
+                _die;
+
                 _say("cmd_code==1");
                 break;
 

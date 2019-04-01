@@ -28,7 +28,7 @@ my $project_dir = cwd();
 my $parent_dir  = $project_dir;
    $parent_dir  =~ s/\/[^\/]+$//;
 
-my $claytonkb_deps = [ qw{lib_babel cnf_parse} ];
+my $claytonkb_deps = [ qw{cnf_parse lib_babel} ];
 
 our ($opt_o, $opt_v, $opt_V, $opt_s, $opt_t);
 getopts('ovVst');
