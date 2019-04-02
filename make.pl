@@ -15,6 +15,8 @@ use strict;
 #   Clean:
 #       perl make.pl clean
 
+# stat -c %Y .last_built
+
 use Getopt::Std;
 use IPC::Cmd qw[can_run run run_forked];
 use Cwd;
@@ -32,7 +34,6 @@ my $claytonkb_deps = [ qw{cnf_parse lib_babel} ];
 
 our ($opt_o, $opt_v, $opt_V, $opt_s, $opt_t);
 getopts('ovVst');
-
 my $arg = shift;
 
 my $verbose              = ($opt_v or $opt_V);
@@ -44,32 +45,9 @@ my $default_optimize     = "";
    $default_optimize     = "-O3" if $opt_o;
 
 my $default_warnings     = "-Wall -Wfatal-errors";
-my $default_libraries    = "-lm -lncurses -lpthread -lrt -l$project";
+my $default_libraries    = "-lm -lncurses -lpthread -lrt ";
 
-if(($#{$claytonkb_deps} > -1) and ($arg ne "clean")){
-
-    for(@{$claytonkb_deps}){
-        makepl_say("dependency: $_") if($verbose);
-    }
-
-    makepl_cd($parent_dir);
-
-    my $parent_sibling_dirs = makepl_do("ls");
-    my @parent_sibling_dirs = split(/\n/, $parent_sibling_dirs->[0]) if(defined $parent_sibling_dirs);
-
-    for my $dep (@{$claytonkb_deps}){
-        if( ! grep(/^$dep$/, @parent_sibling_dirs) ){
-            makepl_say("Missing claytonkb dependency: $dep");
-            die;
-        }
-    }
-
-    makepl_cd($project_dir);
-
-}
-else{
-    makepl_say("No dependencies") if($verbose);
-}
+check_claytonkb_deps();
 
 my @default_lib_dirs     = ("${project_dir}/lib");
 my @default_include_dirs = ("${project_dir}/src");
@@ -128,7 +106,7 @@ sub deps{
     for my $dep (@{$claytonkb_deps}){
         makepl_cd("$parent_dir/$dep");
         if(!-e ".last_built"){
-           system("perl make.pl $recursive_verbose");
+           system("perl make.pl $recursive_verbose"); # XXX NO CHECKING XXX
         }
     }
 
@@ -204,9 +182,11 @@ sub get_libs{
 
     foreach my $dir (@default_lib_dirs){
 
-        #my $libs = makepl_do("ls $dir");
-        my $libs = `ls $dir/`;
-        my @libs = split(/\n/, $libs);
+#        my $libs = `ls $dir/`;
+#        my @libs = split(/\n/, $libs);
+
+        my $libs = makepl_ls("$dir");
+        my @libs = split(/\n/, $libs) if(defined $libs);
 
         foreach(@libs){ 
             chomp $_;
@@ -242,16 +222,19 @@ sub makepl_do {
     return if $opt_t; # testing switch set
 
     my ($success, $error_message, $full_buf, $stdout_buf, $stderr_buf  ) = 
-        run( command => $cmd, verbose => 0 );    
+        run( command => $cmd, verbose => $verbose );
 
     if(!$success){
+        $touch_last_built=0;
         makepl_say("Failure detected, stopping...");
         print "$error_message\n";
         print "@{$stderr_buf}\n";
         die;
     }
 
-    return $stdout_buf;
+    makepl_say("$stdout_buf->[0]") if $verbose;
+
+    return $stdout_buf->[0];
 
 }
 
@@ -263,12 +246,77 @@ sub makepl_say {
 
 sub makepl_cd {
 
+    makepl_say("Changing directory to: $_[0]") if $verbose;
+
+    return if $opt_t; # testing switch set
+
     unless( chdir($_[0]) ){
+        $touch_last_built=0;
         makepl_say("Error changing to directory: $_[0]");
+        makepl_say("--> $!");
+        die;
     }
 
-    my $current_dir = cwd();
-    makepl_say("Current directory: $current_dir") if $verbose;
+#    my $current_dir = cwd();
+#    makepl_say("Current directory: $current_dir") if $verbose;
 
 }
+
+
+sub makepl_ls {
+
+    my $dir = shift;
+    makepl_say("ls $dir") if $verbose;
+
+    return if $opt_t; # testing switch set
+
+    my ($success, $error_message, $full_buf, $stdout_buf, $stderr_buf  ) = 
+        run( command => "ls $dir", verbose => 0 );    
+
+    if(!$success){
+        $touch_last_built=0;
+        makepl_say("Failure detected, stopping...");
+        print "$error_message\n";
+        print "@{$stderr_buf}\n";
+        die;
+    }
+
+    return $stdout_buf->[0];
+
+}
+
+
+#
+#
+sub check_claytonkb_deps{
+
+    return if $opt_t; # testing switch set
+
+    if(($#{$claytonkb_deps} > -1) and ($arg ne "clean")){
+
+        for(@{$claytonkb_deps}){
+            makepl_say("dependency: $_") if($verbose);
+        }
+
+        makepl_cd($parent_dir);
+
+        my $parent_sibling_dirs = makepl_ls($parent_dir);
+        my @parent_sibling_dirs = split(/\n/, $parent_sibling_dirs) if(defined $parent_sibling_dirs);
+
+        for my $dep (@{$claytonkb_deps}){
+            if( ! grep(/^$dep$/, @parent_sibling_dirs) ){
+                makepl_say("Missing claytonkb dependency: $dep");
+                die;
+            }
+        }
+
+        makepl_cd($project_dir);
+
+    }
+    else{
+        makepl_say("No dependencies") if($verbose);
+    }
+
+}
+
 
