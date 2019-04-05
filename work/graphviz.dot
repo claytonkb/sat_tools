@@ -1,47 +1,71 @@
-digraph g {
+digraph babel {
+
+    node [shape=record];
+    graph [rankdir = "LR"];
     splines=ortho;
-    rankdir="LR";
-    node[shape = circle, fontsize=14];
-    fontsize=18;
-    labeljust="l";
 
-    edge[style=invis, fontsize=12];
+    //        "0Z" [style=invis];
+    //        "0Z" -> "0A" -> "1A" -> "2A";
+    //        "2A" -> "0A" [label=".", constraint=false, style=solid];
+    ////        label="A";
 
-    { rank=same;
-        0 [style = invis];
-        01 [style = invis];
-        02 [style=invis];
-        0 -> 01 -> 02;
+//    { rank=same;
+//        0 [style = invis];
+//        01 [style = invis];
+//        02 [style=invis];
+//        0 -> 01 -> 02;
+//    }
+
+    var_x1:f1 -> cls_0  [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x1:f1 -> cls_9  [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x1:f1 -> cls_10 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x1:f1 -> cls_11 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x1:f1 -> cls_12 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x2:f1 -> cls_1  [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x2:f1 -> cls_11 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x2:f1 -> cls_20 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x3:f1 -> cls_0  [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x3:f1 -> cls_6  [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x3:f1 -> cls_26 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x3:f1 -> cls_29 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x4:f1 -> cls_1  [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x4:f1 -> cls_24 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x4:f1 -> cls_41 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x4:f1 -> cls_42 [constraint=false, style=solid, arrowhead="none", color=magenta];
+    var_x2:f0 -> cls_0  [constraint=false, style=solid, arrowhead="none", color=cyan];
+    var_x2:f0 -> cls_17 [constraint=false, style=solid, arrowhead="none", color=cyan];
+    var_x3:f0 -> cls_21 [constraint=false, style=solid, arrowhead="none", color=cyan];
+    var_x4:f0 -> cls_12 [constraint=false, style=solid, arrowhead="none", color=cyan];
+
+    subgraph variables {
+        var_x0 [style=invis]
+        var_x00 [style=invis]
+        var_x1 [style=bold,shape=record,label="<f0> x1|<f1> ~x1"]
+        var_x1 [style=bold,shape=record,label="<f0> x1|<f1> ~x1"]
+        var_x2 [style=bold,shape=record,label="<f0> x2|<f1> ~x2"]
+        var_x3 [style=bold,shape=record,label="<f0> x3|<f1> ~x3"]
+        var_x4 [style=bold,shape=record,label="<f0> x4|<f1> ~x4"]
+        var_x00 -> var_x0 -> var_x1 -> var_x2 -> var_x3 -> var_x4 [style=invis];
     }
 
-    subgraph A {
-        "0Z" [style=invis];
-        "0Z" -> "0A" -> "1A" -> "2A";
-        "2A" -> "0A" [label=".", constraint=false, style=solid];
-//        label="A";
+    subgraph clauses {
+        rank=same;
+        cls_0  [style=bold,shape=oval]
+        cls_1  [style=bold,shape=oval]
+        cls_6  [style=bold,shape=oval]
+        cls_9  [style=bold,shape=oval]
+        cls_10 [style=bold,shape=oval]
+        cls_11 [style=bold,shape=oval]
+        cls_12 [style=bold,shape=oval]
+        cls_17 [style=bold,shape=oval]
+        cls_20 [style=bold,shape=oval]
+        cls_21 [style=bold,shape=oval]
+        cls_24 [style=bold,shape=oval]
+        cls_26 [style=bold,shape=oval]
+        cls_29 [style=bold,shape=oval]
+        cls_41 [style=bold,shape=oval]
+        cls_42 [style=bold,shape=oval]
+        cls_0 -> cls_1 -> cls_6 -> cls_9 -> cls_10 -> cls_11 -> cls_12 [style=invis];
     }
 
-    subgraph B {
-        "0B" -> "1B" -> "2B";
-        "2B" -> "0B" [label=".", constraint=false, style=solid];
-//        label="B";
-    }
-
-    subgraph C {
-        "0C" -> "1C" -> "2C";
-        "2C" -> "0C" [label=".", constraint=false, style=solid];
-//        label="C";
-    }
-
-    0 -> "0Z"[style=invis];
-    01 -> "0B"[style=invis];
-    02 -> "0C"[style=invis];
-
-    // edges between clusters
-    edge[constraint=false, style=solid];
-    "0A" -> "1B" [label=a]
-    "1A" -> "2B" [label=a]
-    "0B" -> "1C" [label=b]
-    "1B" -> "2C" [label=b]
 }
-

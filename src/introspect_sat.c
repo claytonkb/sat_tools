@@ -28,21 +28,17 @@ str introspect_sat_gv(babel_env *be, st_state *st, clause_list *cl){
 //_dd(80*approx_num_lines+500);
 
     mword str_offset  = 0;
-    bsprintf(be, result, &str_offset, "graph babel {\nnode [shape=record];\n");
 
+    bsprintf(be, result, &str_offset, "graph babel {\nnode [shape=record];\n");
     bsprintf(be, result, &str_offset, "graph [rankdir = \"LR\"];\n");
     bsprintf(be, result, &str_offset, "edge [style=bold, weight=100];\n");
     bsprintf(be, result, &str_offset, "overlap=scale;\n");
 
-//    bsprintf(be, result, &str_offset, "subgraph variables {\n");
     for(i=0;i<cl->num_variables;i++)
         bsprintf(be, result, &str_offset, "var_x%d [style=bold,shape=record,color=magenta,label=\"<f0> x%d|<f1> ~x%d\"]\n", i+1, i+1, i+1);
-//    bsprintf(be, result, &str_offset, "}\n");
 
-//    bsprintf(be, result, &str_offset, "subgraph clauses {\n");
     for(i=0;i<cl->num_clauses;i++)
         bsprintf(be, result, &str_offset, "cls_%d [style=bold,shape=oval,color=cyan]\n", i);
-//    bsprintf(be, result, &str_offset, "}\n");
 
     mword *clause;
     int tempi;
@@ -69,6 +65,31 @@ str introspect_sat_gv(babel_env *be, st_state *st, clause_list *cl){
     return result;
 
 }
+
+//    bsprintf(be, result, &str_offset, "digraph babel {\n");
+//    bsprintf(be, result, &str_offset, "splines=ortho;\n");
+//    bsprintf(be, result, &str_offset, "graph [rankdir = \"LR\"];\n");
+//    bsprintf(be, result, &str_offset, "node[shape = circle, fontsize=14];\n");
+
+//    bsprintf(be, result, &str_offset, "subgraph variables {\n");
+//    bsprintf(be, result, &str_offset, "var_x1 [style=bold,shape=record,color=magenta,label=\"<f0> x1|<f1> ~x1\"]\n");
+//
+//    for(i=1;i<cl->num_variables;i++){
+//        //"0Z" -> "0A" -> "1A" -> "2A";
+//        bsprintf(be, result, &str_offset, "var_x%d -> var_x%d \n", i, i+1);
+//        bsprintf(be, result, &str_offset, "var_x%d [style=bold,shape=record,color=magenta,label=\"<f0> x%d|<f1> ~x%d\"]\n", i+1, i+1, i+1);
+//    }
+//
+//    bsprintf(be, result, &str_offset, "}\n");
+//
+//    subgraph A {
+//        "0Z" [style=invis];
+//        "0Z" -> "0A" -> "1A" -> "2A";
+//        "2A" -> "0A" [label=".", constraint=false, style=solid];
+//    }
+
+//    bsprintf(be, result, &str_offset, "subgraph clauses {\n");
+//    bsprintf(be, result, &str_offset, "}\n");
 
 // Clayton Bauman 2018
 
