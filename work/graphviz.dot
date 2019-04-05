@@ -1,0 +1,47 @@
+digraph g {
+    splines=ortho;
+    rankdir="LR";
+    node[shape = circle, fontsize=14];
+    fontsize=18;
+    labeljust="l";
+
+    edge[style=invis, fontsize=12];
+
+    { rank=same;
+        0 [style = invis];
+        01 [style = invis];
+        02 [style=invis];
+        0 -> 01 -> 02;
+    }
+
+    subgraph A {
+        "0Z" [style=invis];
+        "0Z" -> "0A" -> "1A" -> "2A";
+        "2A" -> "0A" [label=".", constraint=false, style=solid];
+//        label="A";
+    }
+
+    subgraph B {
+        "0B" -> "1B" -> "2B";
+        "2B" -> "0B" [label=".", constraint=false, style=solid];
+//        label="B";
+    }
+
+    subgraph C {
+        "0C" -> "1C" -> "2C";
+        "2C" -> "0C" [label=".", constraint=false, style=solid];
+//        label="C";
+    }
+
+    0 -> "0Z"[style=invis];
+    01 -> "0B"[style=invis];
+    02 -> "0C"[style=invis];
+
+    // edges between clusters
+    edge[constraint=false, style=solid];
+    "0A" -> "1B" [label=a]
+    "1A" -> "2B" [label=a]
+    "0B" -> "1C" [label=b]
+    "1B" -> "2C" [label=b]
+}
+
